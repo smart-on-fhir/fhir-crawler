@@ -1,0 +1,40 @@
+{
+  "name": "fhir-crawler",
+  "version": "1.0.0",
+  "description": "Utility do download resources from a FHIR server",
+  "main": "index.js",
+  "engines": {
+    "node": "18"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node  --skipProject --transpile-only src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smart-on-fhir/fhir-crawler.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/smart-on-fhir/fhir-crawler/issues"
+  },
+  "homepage": "https://github.com/smart-on-fhir/fhir-crawler#readme",
+  "devDependencies": {
+    "@types/fhir": "^0.0.36",
+    "@types/jsonwebtoken": "^9.0.1",
+    "@types/mime-types": "^2.1.1",
+    "@types/node-fetch": "^2.6.3",
+    "@types/node-jose": "^1.1.10"
+  },
+  "dependencies": {
+    "@types/node": "^18.15.11",
+    "commander": "^10.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "mime-types": "^2.1.35",
+    "node-fetch": "^2.6.9",
+    "node-jose": "^2.2.0",
+    "ts-node": "^10.9.1"
+  }
+}

@@ -1,0 +1,101 @@
+import Path           from "path"
+import { format }     from "util"
+import { Command }    from "commander"
+import pkg            from "../package.json"
+import BulkDataClient from "./BulkDataClient"
+import FhirClient     from "./FhirClient"
+import { Config }     from "./types"
+import Logger         from "./Logger"
+import {
+    formatDuration,
+    ndjsonEntries,
+    print,
+    sweep
+} from "./utils"
+
+
+const program = new Command();
+program.name("node .")
+program.version(pkg.version)
+program.option("-c, --config [path]", "Path to JS config file")
+
+program.action(async args => {
+    
+    if (!args.config) {
+        console.log(`Please provide the path to your config file as "-c" or "--config" option!\n`)
+        return program.help()
+    }
+    const configPath = Path.resolve(process.cwd(), args.config)
+    const config: Config = require(configPath).default
+    // const config: Config = require(args.config).default
+
+    sweep(config.destination)
+
+    const logger = new Logger(config.destination)
+    logger.clearErrors()
+    logger.clearRequests()
+
+    const bulkClient = new BulkDataClient({
+        ...config.bulkClient,
+        groupId       : config.groupId,
+        retryAfterMSec: config.poolInterval,
+        resources     : Object.keys(config.resources),
+        maxFileSize   : config.maxFileSize,
+        logger
+    })
+
+    const fhirClient = new FhirClient({
+        ...config.fhirClient,
+        resources     : Object.keys(config.resources),
+        destination   : config.destination,
+        throttle      : config.throttle,
+        maxFileSize   : config.maxFileSize,
+        logger
+    })
+
+    const start = Date.now()
+
+    const counts: Record<string, number> = { Patient: 0 }
+    for (const resourceType in config.resources) {
+        counts[resourceType] = 0
+    }
+        
+    // Download Patients -------------------------------------------------------
+    print("Exporting patients")
+    const statusLoc = await bulkClient.kickOff()
+    print("Waiting for patients export...")
+    let progressChecks = 0
+    const manifest = await bulkClient.waitForExport(statusLoc, status => print(`Waiting for patients export: ${status} (${++progressChecks})`))
+    // console.log("Manifest: %o", manifest)
+    print("Downloading patients")
+    const files = await bulkClient.download(manifest, config.destination)
+    // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
+
+    // Download Patient data ---------------------------------------------------
+    counts["Total FHIR Resources"] = 0
+    for (const loc of files) {    
+        for (const patient of ndjsonEntries(loc)) {
+            if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
+                throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
+            }
+            counts.Patient += 1
+            counts["Total FHIR Resources"]++
+            for (const resourceType of Object.keys(config.resources)) {
+                const query = config.resources[resourceType].replace("#{patientId}", patient.id)
+                await fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
+                    Object.assign(counts, {
+                        [resourceType]: (counts[res.resourceType] || 0) + 1,
+                        "Total FHIR Resources": (counts["Total FHIR Resources"] || 0) + 1
+                    })
+                    const lines = Object.keys(counts).map(x => `${x}: ${Number(counts[x]).toLocaleString()}`)
+                    lines.push("Duration: " + formatDuration(Date.now() - start))
+                    print(lines)
+                })
+            }
+        }
+        print.commit()
+    }
+})
+
+program.parseAsync(process.argv).catch(e => console.error(e.message));
+
