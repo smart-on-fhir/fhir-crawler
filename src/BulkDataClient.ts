@@ -33,8 +33,7 @@ export default class BulkDataClient extends BaseClient
         return location
     }
 
-    public async waitForExport(statusEndpoint: string, onProgress?: (status: string) => void): Promise<ExportManifest>
-    {
+    public async waitForExport(statusEndpoint: string, onProgress?: (status: string) => void): Promise<ExportManifest> {
         let { retryAfterMSec, minPoolInterval, maxPoolInterval } = this.options
         const { response, body } = await this.request(statusEndpoint, { headers: { accept: "application/json" }})
 

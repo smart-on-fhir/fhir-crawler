@@ -195,7 +195,7 @@ export async function getAccessToken({
     const tokenResponse = await res.json()
 
     if (res.status !== 200) {
-        logger.error("payload:\n%o\nresponse:\n%o", body, tokenResponse)
+        logger.error("Authentication failed! Payload:\n%o\nResponse:\n%o", body, tokenResponse)
     }
 
     assert(tokenResponse, "Authorization request got empty body")
@@ -203,7 +203,7 @@ export async function getAccessToken({
     assert(tokenResponse.expires_in, "Authorization response does not include expires_in")
 
     return {
-        token    : tokenResponse.access_token,
+        token    : tokenResponse.access_token as string,
         expiresAt: getAccessTokenExpiration(res.body)
     }
 }

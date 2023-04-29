@@ -30,8 +30,7 @@ export default class BaseClient
         this.options = options
     }
 
-    private async getAccessToken()
-    {
+    private async getAccessToken() {
         if (this.accessToken && this.accessTokenExpiresAt - 10 > Date.now() / 1000) {
             return this.accessToken;
         }
@@ -49,16 +48,13 @@ export default class BaseClient
         return token
     }
 
-    protected async getAuthorizationHeader(): Promise<string | undefined>
-    {
+    protected async getAuthorizationHeader(): Promise<string> {
         if (typeof this.options.privateJWKorSecret === "string") {
             return "Basic " + Buffer.from(
                 this.options.clientId + ":" + this.options.clientSecret
             ).toString("base64")
-        } else {
-            const accessToken = await this.getAccessToken()
-            return accessToken ? `Bearer ${ accessToken }` : undefined
         }
+        return `Bearer ${ await this.getAccessToken() }`
     }
 
     protected async request<T=any>(url: string, options: RequestInit | undefined, raw: true): Promise<Response>;
@@ -73,6 +69,8 @@ export default class BaseClient
                 ...options?.headers
             }
         };
+
+        // Can opt-out by passing { authorization: undefined } in headers
         if (!("authorization" in _options.headers!)) {
             const authorization = await this.getAuthorizationHeader()
             if (authorization) {
@@ -102,7 +100,14 @@ export default class BaseClient
         
         if (!response.ok) {
             print.commit()
-            await logger.error("GET %s --> %s %s: %j; Response headers: %j", url, response.status, response.statusText, await response.text(), response.headers.raw())
+            await logger.error(
+                "GET %s --> %s %s: %j; Response headers: %j",
+                url,
+                response.status,
+                response.statusText,
+                await response.text(),
+                response.headers.raw()
+            )
             throw new Error("Request failed. See logs for details.")
         }
         
