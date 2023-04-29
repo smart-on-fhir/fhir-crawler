@@ -6,13 +6,11 @@ import { createWriteStream }                 from "fs"
 
 
 interface BulkDataClientOptions extends BaseClientOptions {
-    groupId: string
-    retryAfterMSec: number
+    groupId        : string
+    retryAfterMSec : number
+    minPoolInterval: number
+    maxPoolInterval: number
 }
-
-const MIN_POOL_DELAY = 100 // 100ms
-const MAX_POOL_DELAY = 1000 * 60 * 60 // 1 hour
-
 
 export default class BulkDataClient extends BaseClient
 {
@@ -37,6 +35,7 @@ export default class BulkDataClient extends BaseClient
 
     public async waitForExport(statusEndpoint: string, onProgress?: (status: string) => void): Promise<ExportManifest>
     {
+        let { retryAfterMSec, minPoolInterval, maxPoolInterval } = this.options
         const { response, body } = await this.request(statusEndpoint, { headers: { accept: "application/json" }})
 
         if (response.status == 200) {
@@ -46,7 +45,6 @@ export default class BulkDataClient extends BaseClient
         if (response.status == 202) {
             const retryAfter  = String(response.headers.get("retry-after") || "").trim();
 
-            let retryAfterMSec = this.options.retryAfterMSec;
             if (retryAfter) {
                 if (retryAfter.match(/\d+/)) {
                     retryAfterMSec = parseInt(retryAfter, 10) * 1000
@@ -56,7 +54,7 @@ export default class BulkDataClient extends BaseClient
                 }
             }
 
-            const poolDelay = Math.min(Math.max(retryAfterMSec, MIN_POOL_DELAY), MAX_POOL_DELAY)
+            const poolDelay = Math.min(Math.max(retryAfterMSec, minPoolInterval), maxPoolInterval)
             onProgress && onProgress(String(response.headers.get("X-Progress") || "working..."))
             await wait(poolDelay)
             return this.waitForExport(statusEndpoint, onProgress)

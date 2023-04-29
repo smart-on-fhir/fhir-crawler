@@ -27,6 +27,22 @@ export interface Config {
     poolInterval: number
 
     /**
+     * Don't allow the bulk status pool interval to be smaller than this. This
+     * can be useful when you want to "correct" the retry-after delay
+     * recommended by the server.
+     * NOTE: The value is in milliseconds and must be <= `poolInterval`.
+     */
+    minPoolInterval: number
+
+    /**
+     * Don't allow the bulk status pool interval to be bigger than this. This
+     * can be useful when you want to "correct" the retry-after delay
+     * recommended by the server.
+     * NOTE: The value is in milliseconds and must be >= `poolInterval`.
+     */
+    maxPoolInterval: number
+
+    /**
      * Downloaded files are named as `<prefix>.<ResourceType>.ndjson` where
      * <prefix> start from `1`. While the file size is less then this, new lines
      * will be appended to it. Once that size is reached another fille will be

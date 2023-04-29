@@ -37,10 +37,12 @@ program.action(async args => {
 
     const bulkClient = new BulkDataClient({
         ...config.bulkClient,
-        groupId       : config.groupId,
-        retryAfterMSec: config.poolInterval,
-        resources     : Object.keys(config.resources),
-        maxFileSize   : config.maxFileSize,
+        groupId         : config.groupId,
+        retryAfterMSec  : config.poolInterval,
+        resources       : Object.keys(config.resources),
+        maxFileSize     : config.maxFileSize,
+        minPoolInterval : config.minPoolInterval,
+        maxPoolInterval : config.maxPoolInterval,
         logger
     })
 
