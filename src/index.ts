@@ -25,9 +25,9 @@ program.action(async args => {
         console.log(`Please provide the path to your config file as "-c" or "--config" option!\n`)
         return program.help()
     }
+
     const configPath = Path.resolve(process.cwd(), args.config)
     const config: Config = require(configPath).default
-    // const config: Config = require(args.config).default
 
     sweep(config.destination)
 
@@ -55,7 +55,10 @@ program.action(async args => {
 
     const start = Date.now()
 
-    const counts: Record<string, number> = { Patient: 0 }
+    const counts: Record<string, number> = {
+        Patient: 0,
+        "Total FHIR Resources": 0
+    }
     for (const resourceType in config.resources) {
         counts[resourceType] = 0
     }
@@ -72,21 +75,19 @@ program.action(async args => {
     // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
 
     // Download Patient data ---------------------------------------------------
-    counts["Total FHIR Resources"] = 0
     for (const loc of files) {    
         for (const patient of ndjsonEntries(loc)) {
             if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
                 throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
             }
-            counts.Patient += 1
+            counts.Patient++
             counts["Total FHIR Resources"]++
             for (const resourceType of Object.keys(config.resources)) {
                 const query = config.resources[resourceType].replace("#{patientId}", patient.id)
                 await fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
-                    Object.assign(counts, {
-                        [resourceType]: (counts[res.resourceType] || 0) + 1,
-                        "Total FHIR Resources": (counts["Total FHIR Resources"] || 0) + 1
-                    })
+                    counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
+                    counts["Total FHIR Resources"]++
+                    counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
                     const lines = Object.keys(counts).map(x => `${x}: ${Number(counts[x]).toLocaleString()}`)
                     lines.push("Duration: " + formatDuration(Date.now() - start))
                     print(lines)
