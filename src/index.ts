@@ -44,15 +44,21 @@ program.action(async args => {
         maxFileSize     : config.maxFileSize,
         minPoolInterval : config.minPoolInterval,
         maxPoolInterval : config.maxPoolInterval,
+        retryLimit      : config.retryLimit,
+        retryDelay      : config.retryDelay,
+        retryStatusCodes: config.retryStatusCodes,
         logger
     })
 
     const fhirClient = new FhirClient({
         ...config.fhirClient,
-        resources     : Object.keys(config.resources),
-        destination   : config.destination,
-        throttle      : config.throttle,
-        maxFileSize   : config.maxFileSize,
+        resources       : Object.keys(config.resources),
+        destination     : config.destination,
+        throttle        : config.throttle,
+        maxFileSize     : config.maxFileSize,
+        retryLimit      : config.retryLimit,
+        retryDelay      : config.retryDelay,
+        retryStatusCodes: config.retryStatusCodes,
         logger
     })
 

@@ -4,19 +4,16 @@ import { getAccessToken, print, toAbsolute, wait } from "./utils"
 
 
 export interface BaseClientOptions {
-    clientId     : string
-    tokenEndpoint: string
-    clientSecret?: string
-    privateJWK  ?: Record<string, any>
-    baseUrl      : string
-    resources    : string[]
-    logger       : Logger
-    [key: string]: any
+    clientId        : string
+    tokenEndpoint   : string
+    baseUrl         : string
+    resources       : string[]
+    logger          : Logger
+    retryStatusCodes: number[]
+    retryDelay      : number
+    retryLimit      : number
+    [key: string]   : any
 }
-
-const RETRY_STATUS_CODES = [408, 413, 429, 500, 502, 503, 504, 521, 522, 524];
-const RETRY_DELAY = 1000;
-const RETRY_LIMIT = 5;
 
 export default class BaseClient
 {
@@ -71,6 +68,7 @@ export default class BaseClient
     protected async request<T=any>(url: string, options: RequestInit | undefined, raw: boolean): Promise<{ response: Response, body: T }>;
     protected async request<T=any>(url: string, options?: RequestInit): Promise<{ response: Response, body: T }>;
     protected async request<T=any>(url: string, options?: RequestInit, raw?: boolean) {
+        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes } = this.options
         const _options: RequestInit = {
             ...options,
             headers: {
@@ -89,17 +87,17 @@ export default class BaseClient
             }
         }
 
-        url = toAbsolute(url, this.options.baseUrl)
+        url = toAbsolute(url, baseUrl)
 
-        let response: Response, count = RETRY_LIMIT
+        let response: Response, count = retryLimit
         do {
-            await wait(count === RETRY_LIMIT ? 0 : RETRY_DELAY)
+            await wait(count === retryLimit ? 0 : retryDelay)
             const start = Date.now()
             response = await fetch(url, _options)
             this.requestsCount++
             const time = Number(Date.now() - start).toLocaleString()
-            await this.options.logger.request(url, response, _options, time)
-        } while (!response.ok && RETRY_STATUS_CODES.includes(response.status) && count--)
+            await logger.request(url, response, _options, time)
+        } while (!response.ok && retryStatusCodes.includes(response.status) && count--)
 
         if (raw) {
             return response
@@ -107,7 +105,7 @@ export default class BaseClient
         
         if (!response.ok) {
             print.commit()
-            await this.options.logger.error("GET %s --> %s %s: %j; Response headers: %j", url, response.status, response.statusText, await response.text(), response.headers.raw())
+            await logger.error("GET %s --> %s %s: %j; Response headers: %j", url, response.status, response.statusText, await response.text(), response.headers.raw())
             throw new Error("Request failed. See logs for details.")
         }
         

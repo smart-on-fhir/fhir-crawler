@@ -61,12 +61,44 @@ const config: Config = {
     poolInterval: 5 * 60 * 1000, // 5 min
 
     /**
+     * Don't allow the bulk status pool interval to be smaller than this. This
+     * can be useful when you want to "correct" the retry-after delay
+     * recommended by the server.
+     * NOTE: The value is in milliseconds and must be <= `poolInterval`.
+     */
+    minPoolInterval: 100, // 100 ms
+    
+    /**
+     * Don't allow the bulk status pool interval to be bigger than this. This
+     * can be useful when you want to "correct" the retry-after delay
+     * recommended by the server.
+     * NOTE: The value is in milliseconds and must be >= `poolInterval`.
+     */
+    maxPoolInterval: 1000 * 60 * 60, // 1 hour
+
+    /**
      * Downloaded files are named as `<prefix>.<ResourceType>.ndjson` where
      * <prefix> start from `1`. While the file size is less then this, new lines
      * will be appended to it. Once that size is reached another fille will be
      * created with incremented <prefix> and the lines will be appending to it.
      */
     maxFileSize : 1024 * 1024 * 100, // ~ 1 GB
+
+    /**
+     * Retried failed requests if they returned one of these status codes.
+     * NOTE: Only failed requests are retried.
+     */
+    retryStatusCodes: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524],
+    
+    /**
+     * Wait this many milliseconds before retrying a failed request
+     */
+    retryDelay: 1000,
+
+    /**
+     * How many times to retry failed requests. Set to 0 to disable retrying.
+     */
+    retryLimit: 5,
 
     /**
      * Client settings for Bulk Data export

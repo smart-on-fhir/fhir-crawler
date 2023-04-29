@@ -51,6 +51,22 @@ export interface Config {
     maxFileSize: number
 
     /**
+     * Retried failed requests if they returned one of these status codes.
+     * NOTE: Only failed requests are retried.
+     */
+    retryStatusCodes: number[]
+    
+    /**
+     * Wait this many milliseconds before retrying a failed request
+     */
+    retryDelay: number
+
+    /**
+     * How many times to retry failed requests. Set to 0 to disable retrying.
+     */
+    retryLimit: number
+
+    /**
      * Map of resource types we want to download and their corresponding query
      * string.
      * NOTE: #{patientId} will be replaced with the current patient ID
