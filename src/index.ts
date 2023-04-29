@@ -1,6 +1,7 @@
 import Path           from "path"
 import { format }     from "util"
 import { Command }    from "commander"
+import { writeFile }  from "fs/promises"
 import pkg            from "../package.json"
 import BulkDataClient from "./BulkDataClient"
 import FhirClient     from "./FhirClient"
@@ -71,7 +72,7 @@ program.action(async args => {
     print("Waiting for patients export...")
     let progressChecks = 0
     const manifest = await bulkClient.waitForExport(statusLoc, status => print(`Waiting for patients export: ${status} (${++progressChecks})`))
-    // console.log("Manifest: %o", manifest)
+    await writeFile(Path.join(config.destination, "manifest.json"), JSON.stringify(manifest, null, 4), "utf8")
     print("Downloading patients")
     const files = await bulkClient.download(manifest, config.destination)
     // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
