@@ -24,7 +24,7 @@ export default class BaseClient
 
     protected accessTokenExpiresAt: number = 300
 
-    protected requestsCount: number = 0
+    public requestsCount: number = 0
 
     protected options: BaseClientOptions
 
@@ -43,7 +43,7 @@ export default class BaseClient
             tokenEndpoint: this.options.tokenEndpoint,
             privateJWK   : this.options.privateJWK!,
             resources    : this.options.resources
-        })
+        }, this.options.logger)
 
         this.accessToken = token
         this.accessTokenExpiresAt = expiresAt

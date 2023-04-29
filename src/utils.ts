@@ -2,6 +2,8 @@ import Path           from "path"
 import { appendFile } from "fs/promises"
 import jwt            from "jsonwebtoken"
 import jose           from "node-jose"
+import fetch          from "node-fetch"
+import Logger         from "./Logger"
 import {
     closeSync,
     openSync,
@@ -151,8 +153,7 @@ export async function getAccessToken({
      * List of ResourceTypes to request access to (Patient is inferred)
      */
     resources: string[]
-}) {
-    // console.log(clientId, tokenEndpoint, privateJWK)
+}, logger: Logger) {
 
     const privateKey = await jose.JWK.asKey(privateJWK, "pem")
     
@@ -177,16 +178,24 @@ export async function getAccessToken({
     body.set("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer")
     body.set("client_assertion", token)
 
-    const res = await fetch(tokenEndpoint, {
+    const options = {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
         body
-    });
+    };
+
+    const start = Date.now()
+    const res = await fetch(tokenEndpoint, options);
+
+    logger.request(tokenEndpoint, res, {
+        ...options,
+        body: options.body.toString().replace(/\bclient_assertion=.*?(&|$)/g, "client_assertion=****")
+    }, Number(Date.now() - start).toLocaleString())
 
     const tokenResponse = await res.json()
 
     if (res.status !== 200) {
-        console.log("payload:\n%o\nresponse:\n%o", body, tokenResponse)
+        logger.error("payload:\n%o\nresponse:\n%o", body, tokenResponse)
     }
 
     assert(tokenResponse, "Authorization request got empty body")
