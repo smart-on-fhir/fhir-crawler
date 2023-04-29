@@ -88,7 +88,7 @@ export interface Config {
     bulkClient: ClientConfig
 }
 
-interface ClientConfigCommon {
+export interface ClientConfig {
     /**
      * Registered client ID
      */
@@ -103,26 +103,16 @@ interface ClientConfigCommon {
      * Token URL (Can be found in the CapabilityStatement)
      */
     tokenEndpoint: string
-}
 
-interface ClientConfigWithJWK extends ClientConfigCommon {
     /**
-     * The private key as KWK (not JWKS!)
+     * - If this is a string it should be your Client Secret and the client will 
+     *   use basic auth.
+     * - Otherwise this must be your private key as JWK object and the client
+     *   will use Backend Services auth
      */
-    privateJWK?: Record<string, any>
+    privateJWKorSecret: Record<string, any> | string
 }
 
-interface ClientConfigWithSecret extends ClientConfigCommon {
-    /**
-     * Client Secret
-     */
-    clientSecret?: string
-}
-
-/**
- * Clients can authenticate using either Backend Services or Basic Auth
- */
-export type ClientConfig = ClientConfigWithJWK | ClientConfigWithSecret
 
 export interface ExportManifest {
     transactionTime: string // FHIR instant

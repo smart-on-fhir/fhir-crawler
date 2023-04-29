@@ -9,11 +9,10 @@ const SINCE = "2018-01-01T05:00:00.000Z"
  * Client settings for Bulk Data export
  */
 const bulkClient = {
-    baseUrl      : "BULK DATA SERVER BASE URL",
-    clientId     : "BULK DATA CLIENT ID",
-    tokenEndpoint: "BULK DATA AUTH SERVER TOKEN URL", // Can be found in the CapabilityStatement
-    privateJWK   : { /* PRIVATE KEY AS JWK */ },
-    clientSecret : "SECRET FOR BASIC AUTH" // Remove/comment privateJWK if you use this
+    baseUrl           : "BULK DATA SERVER BASE URL",
+    clientId          : "BULK DATA CLIENT ID",
+    tokenEndpoint     : "BULK DATA AUTH SERVER TOKEN URL", // Can be found in the CapabilityStatement
+    privateJWKorSecret: { /* PRIVATE KEY AS JWK */ } // OR client secret string for basic auth
 }
 
 /**
@@ -26,14 +25,14 @@ const bulkClient = {
  * ```
  */
 const fhirClient = {
-    baseUrl      : "FHIR SERVER BASE URL",
-    clientId     : "FHIR CLIENT ID",
-    tokenEndpoint: "AUTH SERVER TOKEN URL", // Can be found in the CapabilityStatement
-    privateJWK   : { /* PRIVATE KEY AS JWK */ },
-    clientSecret : "SECRET FOR BASIC AUTH" // Remove/comment privateJWK if you use this
+    baseUrl           : "FHIR SERVER BASE URL",
+    clientId          : "FHIR CLIENT ID",
+    tokenEndpoint     : "AUTH SERVER TOKEN URL", // Can be found in the CapabilityStatement
+    privateJWKorSecret: { /* PRIVATE KEY AS JWK */ } // OR client secret string for basic auth
 }
 
 const config: Config = {
+
     /**
      * BulkData Group ID
      */
@@ -112,7 +111,8 @@ const config: Config = {
 
     /**
      * Map of resource types we want to download and their corresponding query
-     * string.
+     * string. This does not include `Patient` resources which are downloaded
+     * via bulk data export.
      * NOTE: #{patientId} will be replaced with the current patient ID
      */
     resources: {

@@ -6,6 +6,7 @@ import { getAccessToken, print, toAbsolute, wait } from "./utils"
 export interface BaseClientOptions {
     clientId        : string
     tokenEndpoint   : string
+    privateJWKorSecret: Record<string, any> | string
     baseUrl         : string
     resources       : string[]
     logger          : Logger
@@ -38,7 +39,7 @@ export default class BaseClient
         const { token, expiresAt } = await getAccessToken({
             clientId     : this.options.clientId,
             tokenEndpoint: this.options.tokenEndpoint,
-            privateJWK   : this.options.privateJWK!,
+            privateJWK   : this.options.privateJWKorSecret as any,
             resources    : this.options.resources
         }, this.options.logger)
 
@@ -50,18 +51,14 @@ export default class BaseClient
 
     protected async getAuthorizationHeader(): Promise<string | undefined>
     {
-        if (this.options.privateJWK) {
-            const accessToken = await this.getAccessToken()
-            return accessToken ? `Bearer ${ accessToken }` : undefined
-        }
-
-        if (this.options.clientSecret) {
+        if (typeof this.options.privateJWKorSecret === "string") {
             return "Basic " + Buffer.from(
                 this.options.clientId + ":" + this.options.clientSecret
             ).toString("base64")
+        } else {
+            const accessToken = await this.getAccessToken()
+            return accessToken ? `Bearer ${ accessToken }` : undefined
         }
-
-        return undefined
     }
 
     protected async request<T=any>(url: string, options: RequestInit | undefined, raw: true): Promise<Response>;
