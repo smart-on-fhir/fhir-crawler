@@ -17,10 +17,10 @@ is to make a copy of the provided [example](./config/example-config.ts):
 ```sh
 cp config/example-config.ts config/config.ts
 ```
-Then edit `config/config.ts` and enter your settings. Read the comments in the
-file for further details.
+Then edit config file and enter your settings. Read the comments in the
+file for further details about each option.
 
-Note that for convenience every wile in the `config` folder is already ignored
+Note that for convenience every file in the `config` folder is already ignored
 by git and you don't need to worry about accidentally committing your secrets.
 
 ## Usage
