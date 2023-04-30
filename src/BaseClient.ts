@@ -51,7 +51,7 @@ export default class BaseClient
     protected async getAuthorizationHeader(): Promise<string> {
         if (typeof this.options.privateJWKorSecret === "string") {
             return "Basic " + Buffer.from(
-                this.options.clientId + ":" + this.options.clientSecret
+                this.options.clientId + ":" + this.options.privateJWKorSecret
             ).toString("base64")
         }
         return `Bearer ${ await this.getAccessToken() }`
