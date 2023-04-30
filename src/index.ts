@@ -107,5 +107,7 @@ program.action(async args => {
     }
 })
 
-program.parseAsync(process.argv).catch(e => console.error(e.message));
-
+program.parseAsync(process.argv).catch(e => {
+    console.error(e.stack)
+    process.exit(1)
+});

@@ -1,8 +1,9 @@
-import BaseClient, { BaseClientOptions }     from "./BaseClient"
-import { assert, getPrefixedFileName, wait } from "./utils"
-import { ExportManifest }                    from "./types"
-import { format }                            from "util"
-import { createWriteStream }                 from "fs"
+import assert                            from "assert"
+import { format }                        from "util"
+import { createWriteStream }             from "fs"
+import BaseClient, { BaseClientOptions } from "./BaseClient"
+import { getPrefixedFileName, wait }     from "./utils"
+import { ExportManifest }                from "./types"
 
 
 interface BulkDataClientOptions extends BaseClientOptions {
@@ -14,8 +15,6 @@ interface BulkDataClientOptions extends BaseClientOptions {
 
 export default class BulkDataClient extends BaseClient
 {
-    protected options: BulkDataClientOptions
-
     constructor(options: BulkDataClientOptions) {
         super(options)
     }
@@ -29,7 +28,7 @@ export default class BulkDataClient extends BaseClient
             }
         })
         const location = response.headers.get("content-location")
-        assert(location, "The kick-off response did not include content-location header")
+        assert.ok(location, "The kick-off response did not include content-location header")
         return location
     }
 
@@ -82,7 +81,7 @@ export default class BulkDataClient extends BaseClient
             headers.authorization = undefined // Disables authorization
         }
         const response = await this.request(url, { headers }, true);
-        assert(response.body, "No response body")
+        assert.ok(response.body, "No response body")
         const fileStream = createWriteStream(path);
         await new Promise((resolve, reject) => {
             response.body!.pipe (fileStream);

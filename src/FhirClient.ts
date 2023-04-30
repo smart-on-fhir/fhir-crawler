@@ -14,7 +14,7 @@ export default class FhirClient extends BaseClient
             const arr = result.entry || [];
             for (const entry of arr) {
                 if ((entry.resource?.resourceType || "").toLowerCase() == "bundle") {
-                    await forEachResource(entry.resource as fhir4.Bundle)
+                    await forEachResource(entry.resource as fhir4.Bundle) // nested bundle
                 } else {
                     await visitor(entry.resource as fhir4.Resource, url)
                 }

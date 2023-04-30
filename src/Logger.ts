@@ -18,7 +18,7 @@ export default class Logger
         return appendFile(path, format(...args) + "\n")
     }
 
-    public async request(url: string, res: Response, options: any = {}, time = "") {
+    public async request(url: string, res: Response, options: any, time: string) {
         if (options.headers?.authorization) {
             options = {
                 ...options,

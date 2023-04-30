@@ -3,6 +3,7 @@ import { appendFile } from "fs/promises"
 import jwt            from "jsonwebtoken"
 import jose           from "node-jose"
 import fetch          from "node-fetch"
+import assert         from "assert"
 import Logger         from "./Logger"
 import {
     closeSync,
@@ -49,7 +50,7 @@ export async function appendToNdjson(resource: fhir4.Resource, destination: Path
 export const print = (() => {
     let lastLinesLength = 0;
     
-    const _print = (lines: string | string[] = "") => {
+    const _print = (lines: string | string[]) => {
         _print.clear();
         lines = Array.isArray(lines) ? lines : [lines];
         process.stdout.write(lines.join("\n") + "\n");
@@ -192,15 +193,13 @@ export async function getAccessToken({
         body: options.body.toString().replace(/\bclient_assertion=.*?(&|$)/g, "client_assertion=****")
     }, Number(Date.now() - start).toLocaleString())
 
+    assert.equal(res.status, 200, "Authentication failed!")
+
     const tokenResponse = await res.json()
 
-    if (res.status !== 200) {
-        logger.error("Authentication failed! Payload:\n%o\nResponse:\n%o", body, tokenResponse)
-    }
-
-    assert(tokenResponse, "Authorization request got empty body")
-    assert(tokenResponse.access_token, "Authorization response does not include access_token")
-    assert(tokenResponse.expires_in, "Authorization response does not include expires_in")
+    assert.ok(tokenResponse, "Authorization request got empty body")
+    assert.ok(tokenResponse.access_token, "Authorization response does not include access_token")
+    assert.ok(tokenResponse.expires_in, "Authorization response does not include expires_in")
 
     return {
         token    : tokenResponse.access_token as string,
@@ -208,7 +207,7 @@ export async function getAccessToken({
     }
 }
 
-export function getPrefixedFileName(destination: string, fileName: string, maxFileSize: number = 1024 * 1024 * 1024) {
+export function getPrefixedFileName(destination: string, fileName: string, maxFileSize: number) {
     let dst: string, counter = 0, stat: Stats | undefined;
     do {
         dst = Path.join(destination, ++counter + "." + fileName)
