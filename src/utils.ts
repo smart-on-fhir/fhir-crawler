@@ -73,48 +73,6 @@ export const print = (() => {
     return _print
 })();
 
-export function formatDuration(ms: number) {
-    let out: string[] = [];
-    let meta = [
-        { n: 1000 * 60 * 60 * 24 * 7  , label: "week" },
-        { n: 1000 * 60 * 60 * 24  , label: "day" },
-        { n: 1000 * 60 * 60  , label: "hour" },
-        { n: 1000 * 60  , label: "minute" },
-        { n: 1000  , label: "second" }
-    ];
-
-    meta.reduce((prev, cur, i, all) => {
-        let chunk = Math.floor(prev / cur.n);
-        if (chunk) {
-            out.push(`${chunk} ${cur.label}${chunk > 1 ? "s" : ""}`);
-            return prev - chunk * cur.n
-        }
-        return prev
-    }, ms);
-
-    if (!out.length) {
-        out.push(`0 ${meta.pop()!.label}s`);
-    }
-
-    if (out.length > 1) {
-        let last = out.pop();
-        out[out.length - 1] += " and " + last;
-    }
-
-    return out.join(", ")
-}
-
-export function assert(condition: any, error?: string | ErrorConstructor, ctor = Error): asserts condition {
-    if (!(condition)) {
-        if (typeof error === "function") {
-            throw new error()
-        }
-        else {
-            throw new ctor(error || "Assertion failed")
-        }
-    }
-}
-
 /**
  * Given a token response, computes and returns the expiresAt timestamp.
  * Note that this should only be used immediately after an access token is

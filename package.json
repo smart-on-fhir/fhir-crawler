@@ -23,14 +23,16 @@
   "homepage": "https://github.com/smart-on-fhir/fhir-crawler#readme",
   "devDependencies": {
     "@types/fhir": "^0.0.36",
+    "@types/humanize-duration": "^3.27.1",
     "@types/jsonwebtoken": "^9.0.1",
     "@types/mime-types": "^2.1.1",
+    "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.3",
     "@types/node-jose": "^1.1.10"
   },
   "dependencies": {
-    "@types/node": "^18.15.11",
     "commander": "^10.0.1",
+    "humanize-duration": "^3.28.0",
     "jsonwebtoken": "^9.0.0",
     "mime-types": "^2.1.35",
     "node-fetch": "^2.6.9",

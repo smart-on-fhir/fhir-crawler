@@ -1,14 +1,14 @@
-import Path           from "path"
-import { format }     from "util"
-import { Command }    from "commander"
-import { writeFile }  from "fs/promises"
-import pkg            from "../package.json"
-import BulkDataClient from "./BulkDataClient"
-import FhirClient     from "./FhirClient"
-import { Config }     from "./types"
-import Logger         from "./Logger"
+import Path             from "path"
+import { format }       from "util"
+import { Command }      from "commander"
+import { writeFile }    from "fs/promises"
+import pkg              from "../package.json"
+import BulkDataClient   from "./BulkDataClient"
+import FhirClient       from "./FhirClient"
+import { Config }       from "./types"
+import Logger           from "./Logger"
+import humanizeDuration from "humanize-duration"
 import {
-    formatDuration,
     ndjsonEntries,
     print,
     sweep
@@ -98,7 +98,7 @@ program.action(async args => {
                     counts["Total FHIR Resources"]++
                     counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
                     const lines = Object.keys(counts).map(x => `${x}: ${Number(counts[x]).toLocaleString()}`)
-                    lines.push("Duration: " + formatDuration(Date.now() - start))
+                    lines.push("Duration: " + humanizeDuration(Date.now() - start))
                     print(lines)
                 })
             }
