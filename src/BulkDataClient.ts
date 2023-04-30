@@ -44,7 +44,7 @@ export default class BulkDataClient extends BaseClient
             const retryAfter  = String(response.headers.get("retry-after") || "").trim();
 
             if (retryAfter) {
-                if (retryAfter.match(/\d+/)) {
+                if (retryAfter.match(/^\d+(.\d+)?$/)) {
                     retryAfterMSec = parseInt(retryAfter, 10) * 1000
                 } else {
                     let d = new Date(retryAfter);
