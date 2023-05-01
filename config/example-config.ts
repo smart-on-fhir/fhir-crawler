@@ -81,7 +81,7 @@ const config: Config = {
      * will be appended to it. Once that size is reached another fille will be
      * created with incremented <prefix> and the lines will be appending to it.
      */
-    maxFileSize : 1024 * 1024 * 100, // ~ 1 GB
+    maxFileSize : 1e9, // ~ 1 GB
 
     /**
      * Retried failed requests if they returned one of these status codes.
