@@ -25,6 +25,14 @@ file for further details about each option.
 Note that for convenience every file in the `config` folder is already ignored
 by git and you don't need to worry about accidentally committing your secrets.
 
+*<b style="color:#F00">Warning:</b> The `destination` option can be dangerous!
+By default, the script will delete all the `.ndjson` or `manifest.json` files
+found in the specified destination directory prior to execution. It will also
+empty any previous log files found there. If you specify a directory that contains
+important data, it will be permanently deleted without any prompt or confirmation.
+It is important to use caution when specifying the `destination` option to avoid data loss.*
+
+
 ## Usage
 `cd` into the `fhir-crawler` folder and run:
 ```sh
