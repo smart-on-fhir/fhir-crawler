@@ -178,7 +178,7 @@ export function sweep(destination: string) {
     const items = readdirSync(destination);
     for (const file of items) {
         const path = Path.join(destination, file)
-        if (path.endsWith(".ndjson") && statSync(path).isFile()) {
+        if ((file === "manifest.json" || path.endsWith(".ndjson")) && statSync(path).isFile()) {
             unlinkSync(path)
         }
     }
