@@ -4,7 +4,7 @@
   "description": "Utility do download resources from a FHIR server",
   "main": "index.js",
   "engines": {
-    "node": "18"
+    "node": "16"
   },
   "scripts": {
     "test": "nyc --reporter=lcov ts-mocha -p ./test/tsconfig.json ./test/*.test.ts",
