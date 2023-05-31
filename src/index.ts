@@ -98,8 +98,11 @@ program.action(async args => {
                     counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
                     counts["Total FHIR Resources"]++
                     counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
-                    const lines = Object.keys(counts).map(x => `${x}: ${Number(counts[x]).toLocaleString()}`)
-                    lines.push("Duration: " + humanizeDuration(Date.now() - start))
+                    const duration = (Date.now() - start)
+                    const lines = Object.keys(counts).map(x => `${clc.bold(x)}: ${clc.cyan(Number(counts[x]).toLocaleString())}`)
+                    lines.push(clc.bold("Duration: ") + clc.cyan(humanizeDuration(duration)))
+                    const minutes = duration / 60000
+                    lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
                     print(lines)
                 })
             }
