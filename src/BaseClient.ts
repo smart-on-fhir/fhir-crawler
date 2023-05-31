@@ -1,6 +1,14 @@
-import fetch, { RequestInit, Response }            from "node-fetch"
-import Logger                                      from "./Logger"
-import { getAccessToken, print, toAbsolute, wait } from "./utils"
+import fetch, { FetchError, RequestInit, Response } from "node-fetch"
+import prompt                                       from "prompt-sync"
+import clc                                          from "cli-color"
+import Logger                                       from "./Logger"
+import {
+    getAccessToken,
+    headersToObject,
+    print,
+    toAbsolute,
+    wait
+} from "./utils"
 
 
 export interface BaseClientOptions {
@@ -94,21 +102,51 @@ export default class BaseClient
             await logger.request(url, response, _options, time)
         } while (!response.ok && retryStatusCodes.includes(response.status) && count--)
 
-        if (raw) {
-            return response
-        }
-        
-        if (!response.ok) {
+        // Manual retry
+        while (!response.ok) {
             print.commit()
+            
+            const txt = await response.text()
+
+            console.log(clc.bold.red("\n\nRequest failed!"))
+            console.log(clc.bold.red("---------------------------------------"))
+            console.log(clc.bold("\nRequest:"), clc.cyan(_options.method || "GET", url))
+            console.log(clc.bold("\nRequest Body:"))
+            console.log(_options.body)
+            console.log(clc.bold("\nRequest Headers:"))
+            console.log(_options.headers)
+            console.log(clc.bold("\nResponse:"), response.status, response.statusText)
+            console.log(clc.bold("\nResponse Headers:"))
+            console.log(headersToObject(response.headers))
+            console.log(clc.bold("\nResponse Body:"))
+            console.log(clc.cyan(txt.substring(0, 100) + (txt.length > 100 ? "..." : "")))
+            console.log(clc.beep);
+            console.log(clc.bold.red("---------------------------------------\n\n"))
+
             await logger.error(
                 "GET %s --> %s %s: %j; Response headers: %j",
                 url,
                 response.status,
                 response.statusText,
-                await response.text(),
+                txt,
                 response.headers.raw()
             )
-            throw new Error("Request failed. See logs for details.")
+
+            if (process.env.NODE_ENV !== "test") {
+                const answer = prompt()(clc.yellow.bold("Would you like to retry this request? [Y/n]"));
+                if (!answer || answer.toLowerCase() === 'y') {
+                    this.requestsCount++
+                    response = await fetch(url, _options)
+                } else {
+                    throw new FetchError("Request failed. See logs for details.", "fetch-error-" + response.status)
+                }
+            } else {
+                throw new FetchError("Request failed. See logs for details.", "fetch-error-" + response.status)
+            }
+        }
+
+        if (raw) {
+            return response
         }
         
         let body = await response.text();

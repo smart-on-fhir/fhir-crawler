@@ -1,10 +1,10 @@
-import Path           from "path"
-import { appendFile } from "fs/promises"
-import jwt            from "jsonwebtoken"
-import jose           from "node-jose"
-import fetch          from "node-fetch"
-import assert         from "assert"
-import Logger         from "./Logger"
+import Path               from "path"
+import { appendFile }     from "fs/promises"
+import jwt                from "jsonwebtoken"
+import jose               from "node-jose"
+import fetch, { Headers } from "node-fetch"
+import assert             from "assert"
+import Logger             from "./Logger"
 import {
     closeSync,
     openSync,
@@ -234,4 +234,12 @@ export function *ndjsonEntries<T=Record<string, any>>(path: string): IterableIte
     for (const line of _lines) {
         yield JSON.parse(line.trim());
     }
+}
+
+export function headersToObject(map: Headers) {
+    const out: Record<string, string | string[]> = {}
+    for (const [key, value] of map.entries()) {
+        out[key] = value
+    }
+    return out
 }

@@ -2,6 +2,7 @@ import Path             from "path"
 import { format }       from "util"
 import { Command }      from "commander"
 import { writeFile }    from "fs/promises"
+import clc              from "cli-color"
 import pkg              from "../package.json"
 import BulkDataClient   from "./BulkDataClient"
 import FhirClient       from "./FhirClient"
@@ -107,7 +108,20 @@ program.action(async args => {
     }
 })
 
-program.parseAsync(process.argv).catch(e => {
-    console.error(e.stack)
-    process.exit(1)
+program.parseAsync(process.argv).catch(error => {
+    
+    if (error.name === 'AbortError') {
+        console.log(clc.bold('Request was aborted'));
+        process.exit(1)
+    }
+
+    else if (error.name === 'FetchError') {
+        console.log(clc.red.bold(error.message))
+        process.exit(1)
+    }
+    
+    else {
+        console.log(clc.red(error.stack))
+        process.exit(1)
+    }
 });
