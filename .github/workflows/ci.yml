@@ -19,4 +19,4 @@ jobs:
         CI: true
     strategy:
       matrix:
-        node-version: [18.x]
+        node-version: [16.x]
