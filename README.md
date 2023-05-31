@@ -4,7 +4,7 @@ from FHIR servers. It is designed to be flexible and configurable alternative to
 FHIR Bulk Data exports, and can handle large volumes of data.
 
 ## Prerequisites
-NodeJS 18 and Git
+NodeJS 16+ and Git
 
 ## Installation
 ```sh
