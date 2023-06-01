@@ -119,7 +119,7 @@ export default class BaseClient
             console.log(clc.bold("\nResponse Headers:"))
             console.log(headersToObject(response.headers))
             console.log(clc.bold("\nResponse Body:"))
-            console.log(clc.cyan(txt.substring(0, 100) + (txt.length > 100 ? "..." : "")))
+            console.log(clc.cyan(txt.substring(0, 200) + (txt.length > 200 ? "..." : "")))
             console.log(clc.beep);
             console.log(clc.bold.red("---------------------------------------\n\n"))
 
