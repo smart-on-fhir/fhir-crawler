@@ -43,7 +43,7 @@ npm start -- -c path/to/my/config.ts
 The script will display some basic stats in the terminal, and will also generate 
 two log files within the output folder (where the NDJSON files are downloaded):
 - `error_log.txt` contains any errors encountered while exporting data. Those errors are
-  more or less unoredictable, thus the log is in plain text format.
+  more or less unpredictable, thus the log is in plain text format.
 - `request_log.tsv` contains information about HTTP requests and responses.
   These logs have a predictable structure so the TSV format was chosen to make them
   easier to consume by both humans and spreadsheet apps.
