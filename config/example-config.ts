@@ -110,6 +110,18 @@ const config: Config = {
     fhirClient,
 
     /**
+     * Currently treated as boolean.
+     * - 0 (or falsy) means serial downloads
+     * - any other number means that there is one download process for each
+     * resourceType other than Patient.
+     *  
+     * NOTE: In the future this may be changed to represent the max number of
+     * parallel downloads, but we don't need that yet while dealing with limited
+     * number of resource types.
+     */
+    parallel: 0,
+
+    /**
      * Map of resource types we want to download and their corresponding query
      * string. This does not include `Patient` resources which are downloaded
      * via bulk data export.
