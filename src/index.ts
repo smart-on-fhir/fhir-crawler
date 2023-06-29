@@ -92,9 +92,10 @@ program.action(async args => {
             }
             counts.Patient++
             counts["Total FHIR Resources"]++
-            for (const resourceType of Object.keys(config.resources)) {
+
+            function createWorker(resourceType: string) {
                 const query = config.resources[resourceType].replace("#{patientId}", patient.id)
-                await fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
+                return fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
                     counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
                     counts["Total FHIR Resources"]++
                     counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
@@ -105,6 +106,14 @@ program.action(async args => {
                     lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
                     print(lines)
                 })
+            }
+
+            if (config.parallel) {
+                await Promise.all(Object.keys(config.resources).map(createWorker))
+            } else {
+                for (const resourceType of Object.keys(config.resources)) {
+                    await createWorker(resourceType)
+                }
             }
         }
         print.commit()
