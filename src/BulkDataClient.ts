@@ -82,7 +82,7 @@ export default class BulkDataClient extends BaseClient
         }
         const response = await this.request(url, { headers }, true);
         assert.ok(response.body, "No response body")
-        const fileStream = createWriteStream(path);
+        const fileStream = createWriteStream(path, { flags: "a" });
         await new Promise((resolve, reject) => {
             response.body!.pipe (fileStream);
             response.body!.on("error", reject);
