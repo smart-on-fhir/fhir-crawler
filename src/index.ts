@@ -86,7 +86,7 @@ program.action(async args => {
     // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
 
     // Download Patient data ---------------------------------------------------
-    const runner = new TaskRunner(config.parallel)
+    const runner = new TaskRunner(config.parallel ?? 10)
 
     for (const loc of files) {    
         for (const patient of ndjsonEntries(loc)) {
