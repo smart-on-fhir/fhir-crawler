@@ -7,9 +7,9 @@
     "node": ">=16"
   },
   "scripts": {
-    "test": "nyc --reporter=lcov ts-mocha -p ./test/tsconfig.json ./test/*.test.ts",
+    "test": "NODE_ENV=test nyc --reporter=lcov ts-mocha -p ./test/tsconfig.json ./test/*.test.ts",
     "test:watch": "NODE_ENV=test npm test -- -w --watch-files='src/*.ts' --watch-files='test/*.ts'",
-    "start": "NODE_ENV=test ts-node --transpile-only src/index.ts"
+    "start": "ts-node --transpile-only src/index.ts"
   },
   "repository": {
     "type": "git",
