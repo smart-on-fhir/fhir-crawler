@@ -9,6 +9,7 @@ import FhirClient       from "./FhirClient"
 import { Config }       from "./types"
 import Logger           from "./Logger"
 import humanizeDuration from "humanize-duration"
+import TaskRunner       from "./TaskRunner"
 import {
     ndjsonEntries,
     print,
@@ -85,6 +86,8 @@ program.action(async args => {
     // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
 
     // Download Patient data ---------------------------------------------------
+    const runner = new TaskRunner(config.parallel)
+
     for (const loc of files) {    
         for (const patient of ndjsonEntries(loc)) {
             if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
@@ -92,8 +95,7 @@ program.action(async args => {
             }
             counts.Patient++
             counts["Total FHIR Resources"]++
-
-            function createWorker(resourceType: string) {
+            runner.add(...Object.keys(config.resources).map(resourceType => async () => {
                 const query = config.resources[resourceType].replace("#{patientId}", patient.id)
                 return fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
                     counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
@@ -106,15 +108,7 @@ program.action(async args => {
                     lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
                     print(lines)
                 })
-            }
-
-            if (config.parallel) {
-                await Promise.all(Object.keys(config.resources).map(createWorker))
-            } else {
-                for (const resourceType of Object.keys(config.resources)) {
-                    await createWorker(resourceType)
-                }
-            }
+            }))
         }
         print.commit()
     }

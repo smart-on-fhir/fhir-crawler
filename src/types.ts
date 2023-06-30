@@ -67,14 +67,17 @@ export interface Config {
     retryLimit: number
 
     /**
-     * Currently treated as boolean. 0 (or falsy) means serial downloads, and
-     * any other number means that there is one download process for each
-     * resourceType other than Patient. 
-     * NOTE: In the future this may be changed to represent the max number of
-     * parallel downloads, but we don't need that yet while dealing with limited
-     * number of resource types.
+     * - `1` (or less) means serial downloads
+     * - `>1` means that there is one download process for each resourceType other
+     * than Patient, but not more than this number.
+     * For example (if this is set to 10):
+     * 1. If you are downloading 5 resource types, setting this to 10 is the
+     * same as setting it to 5.
+     * 2. If you are downloading 50 resource types the first 10 will be started
+     * immediately and work in parallel and the rest will start whenever a
+     * worker becomes available.
      */
-    parallel?: number,
+    parallel: number,
 
     /**
      * Map of resource types we want to download and their corresponding query
