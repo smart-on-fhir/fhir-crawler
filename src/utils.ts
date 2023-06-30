@@ -146,7 +146,7 @@ export async function getAccessToken({
     const start = Date.now()
     const res = await fetch(tokenEndpoint, options);
 
-    logger.request(tokenEndpoint, res, {
+    await logger.request(tokenEndpoint, res, {
         ...options,
         body: options.body.toString().replace(/\bclient_assertion=.*?(&|$)/g, "client_assertion=****")
     }, Number(Date.now() - start).toLocaleString())
