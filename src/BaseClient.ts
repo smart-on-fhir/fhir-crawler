@@ -5,6 +5,7 @@ import Logger                                       from "./Logger"
 import {
     getAccessToken,
     headersToObject,
+    lock,
     print,
     toAbsolute,
     wait
@@ -62,7 +63,10 @@ export default class BaseClient
                 this.options.clientId + ":" + this.options.privateJWKorSecret
             ).toString("base64")
         }
-        return `Bearer ${ await this.getAccessToken() }`
+        const release = await lock()
+        const header = `Bearer ${ await this.getAccessToken() }`
+        release()
+        return header
     }
 
     protected async request<T=any>(url: string, options: RequestInit | undefined, raw: true): Promise<Response>;

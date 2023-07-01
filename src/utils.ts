@@ -243,3 +243,14 @@ export function headersToObject(map: Headers) {
     }
     return out
 }
+
+export const lock = (() => {
+    let isLocked = false;
+    return async function acquire(): Promise<() => void> {
+        if (isLocked) {
+            return new Promise(resolve => setTimeout(resolve, 10)).then(acquire)
+        }
+        isLocked = true
+        return () => { isLocked = false }
+    }
+})()
