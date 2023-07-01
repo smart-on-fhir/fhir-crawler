@@ -49,6 +49,7 @@ program.action(async args => {
         retryLimit      : config.retryLimit,
         retryDelay      : config.retryDelay,
         retryStatusCodes: config.retryStatusCodes,
+        requestTimeout  : config.requestTimeout ?? 60000,
         logger
     })
 
@@ -61,6 +62,7 @@ program.action(async args => {
         retryLimit      : config.retryLimit,
         retryDelay      : config.retryDelay,
         retryStatusCodes: config.retryStatusCodes,
+        requestTimeout  : config.requestTimeout ?? 60000,
         logger
     })
 

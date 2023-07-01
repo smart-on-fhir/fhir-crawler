@@ -110,6 +110,11 @@ const config: Config = {
     fhirClient,
 
     /**
+     * Request timeout in milliseconds
+     */
+    requestTimeout: 60000,
+
+    /**
      * - `1` (or less) means serial downloads
      * - `>1` means that there is one download process for each resourceType
      * other than Patient, but not more than this number.

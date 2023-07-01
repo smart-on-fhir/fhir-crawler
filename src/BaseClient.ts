@@ -22,6 +22,7 @@ export interface BaseClientOptions {
     retryStatusCodes: number[]
     retryDelay      : number
     retryLimit      : number
+    requestTimeout  : number
     [key: string]   : any
 }
 
@@ -73,7 +74,23 @@ export default class BaseClient
     protected async request<T=any>(url: string, options: RequestInit | undefined, raw: boolean): Promise<{ response: Response, body: T }>;
     protected async request<T=any>(url: string, options?: RequestInit): Promise<{ response: Response, body: T }>;
     protected async request<T=any>(url: string, options?: RequestInit, raw?: boolean) {
-        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes } = this.options
+        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, requestTimeout } = this.options
+
+        async function _fetch(url: string, options: RequestInit) {
+            if (!requestTimeout) {
+                return await fetch(url, options)
+            }
+            const abortController = new AbortController();
+            const timer = setTimeout(() => abortController.abort(), requestTimeout)
+            const response = await fetch(url, {
+                ...options,
+                // @ts-ignore
+                signal: abortController.signal
+            })
+            clearTimeout(timer);
+            return response;
+        }
+
         const _options: RequestInit = {
             ...options,
             headers: {
@@ -100,11 +117,32 @@ export default class BaseClient
         do {
             await wait(count === retryLimit ? 0 : retryDelay)
             const start = Date.now()
-            response = await fetch(url, _options)
-            this.requestsCount++
-            const time = Number(Date.now() - start).toLocaleString()
-            await logger.request(url, response, _options, time)
-        } while (!response.ok && retryStatusCodes.includes(response.status) && count--)
+            try {
+                response = await _fetch(url, _options)
+                this.requestsCount++
+                const time = Number(Date.now() - start).toLocaleString()
+                await logger.request(url, response, _options, time)
+            } catch (ex) {
+                const { name, message } = (ex as Error)
+                await logger.error(
+                    "%s: %s (%s %s)",
+                    name,
+                    name === 'AbortError' ? "Request timed out! " + count + " retry attempts left" : message,
+                    _options.method || "GET",
+                    url
+                )
+
+                if (name !== "AbortError") {
+                    throw ex
+                }
+            }
+        } while ((!response! || (!response.ok && retryStatusCodes.includes(response.status))) && count--);
+
+        if (!response!) {
+            const msg = `Failed to get any response from: ${_options.method || "GET"} ${url}`
+            await logger.error(msg)
+            throw new FetchError(msg, "fetch-error")
+        }
 
         // Manual retry
         while (!response.ok) {
@@ -140,7 +178,7 @@ export default class BaseClient
                 const answer = prompt()(clc.yellow.bold("Would you like to retry this request? [Y/n]"));
                 if (!answer || answer.toLowerCase() === 'y') {
                     this.requestsCount++
-                    response = await fetch(url, _options)
+                    response = await _fetch(url, _options)
                 } else {
                     throw new FetchError("Request failed. See logs for details.", "fetch-error-" + response.status)
                 }

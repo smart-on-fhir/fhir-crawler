@@ -67,6 +67,11 @@ export interface Config {
     retryLimit: number
 
     /**
+     * Request timeout in milliseconds
+     */
+    requestTimeout?: number
+
+    /**
      * - `1` (or less) means serial downloads
      * - `>1` means that there is one download process for each resourceType other
      * than Patient, but not more than this number.
@@ -77,7 +82,7 @@ export interface Config {
      * immediately and work in parallel and the rest will start whenever a
      * worker becomes available.
      */
-    parallel: number,
+    parallel?: number,
 
     /**
      * Map of resource types we want to download and their corresponding query
