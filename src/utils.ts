@@ -48,19 +48,22 @@ export async function appendToNdjson(resource: fhir4.Resource, destination: Path
 }
 
 export const print = (() => {
+    
+    const IS_TEST = process.env.NODE_ENV === "test"
+
     let lastLinesLength = 0;
     
     const _print = (lines: string | string[]) => {
         _print.clear();
         lines = Array.isArray(lines) ? lines : [lines];
-        process.stdout.write(lines.join("\n") + "\n");
+        !IS_TEST && process.stdout.write(lines.join("\n") + "\n");
         lastLinesLength = lines.length
         return _print
     }
 
     _print.clear = () => {
         if (lastLinesLength) {
-            process.stdout.write("\x1B[" + lastLinesLength + "A\x1B[0G\x1B[0J");
+            !IS_TEST && process.stdout.write("\x1B[" + lastLinesLength + "A\x1B[0G\x1B[0J");
         }
         return _print
     };
