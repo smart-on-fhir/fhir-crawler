@@ -58,6 +58,7 @@ export default class BulkDataClient extends BaseClient
             return this.waitForExport(statusEndpoint, onProgress)
         }
 
+        // Other 2XX responses
         throw new Error(format("Unexpected bulk status response %s %s. Body: %j", response.status, response.statusText, body))
     }
 
