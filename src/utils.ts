@@ -161,7 +161,7 @@ export async function getAccessToken({
 
     return {
         token    : tokenResponse.access_token as string,
-        expiresAt: getAccessTokenExpiration(res.body)
+        expiresAt: getAccessTokenExpiration(tokenResponse)
     }
 }
 
