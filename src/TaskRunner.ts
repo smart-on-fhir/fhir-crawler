@@ -18,9 +18,7 @@ export default class TaskRunner
     public add(...tasks: Task[]) {
         const wasEmpty = this.tasks.length === 0
         this.tasks.push(...tasks)
-        if (wasEmpty) {
-            this.run()
-        }
+        wasEmpty && this.run()
         return this.job
     }
 
