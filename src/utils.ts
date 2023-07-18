@@ -157,7 +157,7 @@ export async function getAccessToken({
 
     assert.ok(tokenResponse, "Authorization request got empty body")
     assert.ok(tokenResponse.access_token, "Authorization response does not include access_token")
-    assert.ok(tokenResponse.expires_in, "Authorization response does not include expires_in")
+    // assert.ok(tokenResponse.expires_in, "Authorization response does not include expires_in")
 
     return {
         token    : tokenResponse.access_token as string,

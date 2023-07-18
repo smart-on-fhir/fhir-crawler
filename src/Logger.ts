@@ -11,6 +11,8 @@ export default class Logger
 
     constructor(destination: string) {
         this.destination = destination
+        this.clearErrors()
+        this.clearRequests()
     }
 
     public async error(...args: any[]) {

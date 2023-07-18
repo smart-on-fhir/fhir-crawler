@@ -35,8 +35,6 @@ program.action(async args => {
     sweep(config.destination)
 
     const logger = new Logger(config.destination)
-    logger.clearErrors()
-    logger.clearRequests()
 
     const bulkClient = new BulkDataClient({
         ...config.bulkClient,
@@ -50,6 +48,7 @@ program.action(async args => {
         retryDelay      : config.retryDelay,
         retryStatusCodes: config.retryStatusCodes,
         requestTimeout  : config.requestTimeout ?? 60000,
+        destination     : config.destination,
         logger
     })
 
@@ -75,7 +74,7 @@ program.action(async args => {
     for (const resourceType in config.resources) {
         counts[resourceType] = 0
     }
-        
+
     // Download Patients -------------------------------------------------------
     print("Exporting patients")
     const statusLoc = await bulkClient.kickOff()

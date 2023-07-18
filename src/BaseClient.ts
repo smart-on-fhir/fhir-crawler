@@ -23,6 +23,7 @@ export interface BaseClientOptions {
     retryDelay      : number
     retryLimit      : number
     requestTimeout  : number
+    destination     : string
     [key: string]   : any
 }
 
@@ -36,11 +37,13 @@ export default class BaseClient
 
     protected options: BaseClientOptions
 
-    constructor(options: BaseClientOptions) {
+    constructor(options: BaseClientOptions)
+    {
         this.options = options
     }
 
-    private async getAccessToken() {
+    private async getAccessToken()
+    {
         if (this.accessToken && this.accessTokenExpiresAt - 10 > Date.now() / 1000) {
             return this.accessToken;
         }
@@ -58,7 +61,8 @@ export default class BaseClient
         return token
     }
 
-    protected async getAuthorizationHeader(): Promise<string> {
+    protected async getAuthorizationHeader(): Promise<string>
+    {
         if (typeof this.options.privateJWKorSecret === "string") {
             return "Basic " + Buffer.from(
                 this.options.clientId + ":" + this.options.privateJWKorSecret
