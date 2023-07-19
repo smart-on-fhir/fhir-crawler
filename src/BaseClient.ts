@@ -1,6 +1,7 @@
 import fetch, { FetchError, RequestInit, Response } from "node-fetch"
 import prompt                                       from "prompt-sync"
 import clc                                          from "cli-color"
+import { format }                                   from "util"
 import Logger                                       from "./Logger"
 import {
     getAccessToken,
@@ -74,28 +75,28 @@ export default class BaseClient
         return header
     }
 
-    protected async request<T=any>(url: string, options: RequestInit | undefined, raw: true): Promise<Response>;
-    protected async request<T=any>(url: string, options: RequestInit | undefined, raw: boolean): Promise<{ response: Response, body: T }>;
-    protected async request<T=any>(url: string, options?: RequestInit): Promise<{ response: Response, body: T }>;
-    protected async request<T=any>(url: string, options?: RequestInit, raw?: boolean) {
-        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, requestTimeout } = this.options
-
-        async function _fetch(url: string, options: RequestInit) {
-            if (!requestTimeout) {
-                return await fetch(url, options)
-            }
-            const abortController = new AbortController();
-            const timer = setTimeout(() => abortController.abort(), requestTimeout)
-            const response = await fetch(url, {
-                ...options,
-                // @ts-ignore
-                signal: abortController.signal
-            })
-            clearTimeout(timer);
-            return response;
+    private async _fetch(url: string, options: RequestInit)
+    {
+        const { requestTimeout, logger } = this.options
+        if (!requestTimeout) {
+            return await fetch(url, options)
         }
+        const abortController = new AbortController();
+        const timer = setTimeout(() => abortController.abort(), requestTimeout)
+        const start = Date.now()
+        // @ts-ignore
+        const response = await fetch(url, { ...options, signal: abortController.signal })
+        clearTimeout(timer);
+        const time = Number(Date.now() - start).toLocaleString()
+        this.requestsCount++
+        await logger.request(url, response, options, time)
+        return response;
+    }
 
+    private async buildRequestOptions(options: RequestInit = {}): Promise<RequestInit>
+    {
         const _options: RequestInit = {
+            method: "GET",
             ...options,
             headers: {
                 accept: "application/json+fhir",
@@ -115,24 +116,32 @@ export default class BaseClient
             }
         }
 
+        return _options
+    }
+
+    protected async request<T=any>(url: string, options: RequestInit | undefined, raw: true): Promise<Response>;
+    protected async request<T=any>(url: string, options: RequestInit | undefined, raw: boolean): Promise<{ response: Response, body: T }>;
+    protected async request<T=any>(url: string, options?: RequestInit): Promise<{ response: Response, body: T }>;
+    protected async request<T=any>(url: string, options?: RequestInit, raw?: boolean)
+    {
+        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, manualRetry } = this.options
+
+        const _options = await this.buildRequestOptions(options)
+
         url = toAbsolute(url, baseUrl)
 
         let response: Response, count = retryLimit
         do {
             await wait(count === retryLimit ? 0 : retryDelay)
-            const start = Date.now()
             try {
-                response = await _fetch(url, _options)
-                this.requestsCount++
-                const time = Number(Date.now() - start).toLocaleString()
-                await logger.request(url, response, _options, time)
+                response = await this._fetch(url, _options)
             } catch (ex) {
                 const { name, message } = (ex as Error)
                 await logger.error(
                     "%s: %s (%s %s)",
                     name,
                     name === 'AbortError' ? "Request timed out! " + count + " retry attempts left" : message,
-                    _options.method || "GET",
+                    _options.method,
                     url
                 )
 
@@ -143,7 +152,7 @@ export default class BaseClient
         } while ((!response! || (!response.ok && response.status !== 304 && retryStatusCodes.includes(response.status))) && count--);
 
         if (!response!) {
-            const msg = `Failed to get any response from: ${_options.method || "GET"} ${url}`
+            const msg = `Failed to get any response from: ${_options.method} ${url}`
             await logger.error(msg)
             throw new FetchError(msg, "fetch-error")
         }
@@ -152,42 +161,23 @@ export default class BaseClient
         while (!response.ok && response.status !== 304) {
             
             const txt = await response.text()
+            
+            print.commit()
 
-            console.log(clc.bold.red("\n\nRequest failed!"))
-            console.log(clc.bold.red("---------------------------------------"))
-            console.log(clc.bold("\nRequest:"), clc.cyan(_options.method || "GET", url))
-            console.log(clc.bold("\nRequest Body:"))
-            console.log(_options.body)
-            console.log(clc.bold("\nRequest Headers:"))
-            console.log(_options.headers)
-            console.log(clc.bold("\nResponse:"), response.status, response.statusText)
-            console.log(clc.bold("\nResponse Headers:"))
-            console.log(headersToObject(response.headers))
-            console.log(clc.bold("\nResponse Body:"))
-            console.log(clc.cyan(txt.substring(0, 200) + (txt.length > 200 ? "..." : "")))
-            console.log(clc.beep);
-            console.log(clc.bold.red("---------------------------------------\n\n"))
+            // istanbul ignore next (manual retry)
+            if (manualRetry && process.env.NODE_ENV !== "test" && this.askToRetry(url, response, _options, txt)) {
+                response = await this._fetch(url, _options)
+                continue
+            }
 
-            await logger.error(
+            throw new FetchError(format(
                 "GET %s --> %s %s: %j; Response headers: %j",
                 url,
                 response.status,
                 response.statusText,
                 txt,
                 response.headers.raw()
-            )
-
-            if (process.env.NODE_ENV !== "test") {
-                const answer = prompt()(clc.yellow.bold("Would you like to retry this request? [Y/n]"));
-                if (!answer || answer.toLowerCase() === 'y') {
-                    this.requestsCount++
-                    response = await _fetch(url, _options)
-                } else {
-                    throw new FetchError("Request failed. See logs for details.", "fetch-error-" + response.status)
-                }
-            } else {
-                throw new FetchError("Request failed. See logs for details.", "fetch-error-" + response.status)
-            }
+            ), "fetch-error-" + response.status)
         }
 
         if (raw) {
@@ -202,5 +192,26 @@ export default class BaseClient
         }
 
         return { response, body: body as T }
+    }
+
+    // istanbul ignore next
+    protected askToRetry(url: string, response: Response, options: RequestInit, txt: string)
+    {
+        console.log(clc.bold.red("\n\nRequest failed!"))
+        console.log(clc.bold.red("---------------------------------------"))
+        console.log(clc.bold("\nRequest:"), clc.cyan(options.method || "GET", url))
+        console.log(clc.bold("\nRequest Body:"))
+        console.log(options.body)
+        console.log(clc.bold("\nRequest Headers:"))
+        console.log(options.headers)
+        console.log(clc.bold("\nResponse:"), response.status, response.statusText)
+        console.log(clc.bold("\nResponse Headers:"))
+        console.log(headersToObject(response.headers))
+        console.log(clc.bold("\nResponse Body:"))
+        console.log(clc.cyan(txt.substring(0, 200) + (txt.length > 200 ? "..." : "")))
+        console.log(clc.beep);
+        console.log(clc.bold.red("---------------------------------------\n\n"))
+        const answer = prompt()(clc.yellow.bold("Would you like to retry this request? [Y/n]"));
+        return !answer || answer.toLowerCase() === 'y'
     }
 }

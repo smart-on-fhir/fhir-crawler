@@ -1,4 +1,6 @@
-import BaseClient from "./BaseClient"
+import { FetchError } from "node-fetch"
+import { format }     from "util"
+import BaseClient     from "./BaseClient"
 import {
     appendToNdjson,
     getPrefixedFileName,
@@ -8,47 +10,51 @@ import {
 
 export default class FhirClient extends BaseClient
 {
-    private async downloadAll(url: string, visitor: (resource: fhir4.Resource, url: string) => Promise<void>) {
+    private async downloadAll(url: string, expectedType: string, visitor: (resource: fhir4.Resource) => Promise<void>) {
+
+        const handleResource = async (resource: fhir4.Resource) => {
+            if (!resource || !resource.resourceType) {
+                throw new FetchError(format('GET %s -> Did not return a valid resource', url), "fetch-error-bad-response")
+            }
+
+            if (resource.resourceType.toLowerCase() === "bundle") {
+                await forEachResource(resource as fhir4.Bundle)
+            } else {
+                if (expectedType !== resource.resourceType) {
+                    throw new FetchError(
+                        format('GET %s -> expected resource of type %j but got %j: %j', url, expectedType, resource.resourceType, resource),
+                        "fetch-error-bad-response"
+                    )
+                }
+                await visitor(resource)
+            }    
+        }
 
         const forEachResource = async (result: fhir4.Bundle) => {
             const arr = result.entry || [];
             for (const entry of arr) {
-                if ((entry.resource?.resourceType || "").toLowerCase() == "bundle") {
-                    await forEachResource(entry.resource as fhir4.Bundle) // nested bundle
-                } else {
-                    await visitor(entry.resource as fhir4.Resource, url)
-                }
+                await handleResource(entry.resource!)
             }
         
             let next = result.link?.find(l => l.relation == "next")?.url
             if (next) {
                 await wait(this.options.throttle)
-                await this.downloadAll(next!, visitor)
+                await this.downloadAll(next!, expectedType, visitor)
             }
         }
 
         await wait(this.options.throttle)
         const { body } = await this.request<fhir4.Resource>(url)
-        
-        if (body.resourceType.toLowerCase() === "bundle") {
-            await forEachResource(body as fhir4.Bundle)
-        } else {
-            await visitor(body, url)
-        }
+        await handleResource(body)
     }
 
-    public async downloadResource(uri: string, onResource?: (res: fhir4.Resource) => Promise<void>) {
+    public async downloadResource(uri: string, onResource?: (res: fhir4.Resource) => Promise<void>): Promise<void> {
         const expectedType = uri.replace(/\?.*/, "")
         const path = getPrefixedFileName(this.options.destination, expectedType + ".ndjson", this.options.maxFileSize)
-        await this.downloadAll(uri, async (resource, url) => {
-            if (expectedType !== resource.resourceType) {
-                // In Epic we can get OperationOutcome if our search has no results. That is OK but log it just in case
-                await this.options.logger.error('GET %s -> expected resource of type %j but got %j: %j', url, expectedType, resource.resourceType, resource)
-            } else {
-                await appendToNdjson(resource, path)
-                onResource && await onResource(resource)
-            }
+        await this.downloadAll(uri, expectedType, async (resource) => {
+            await appendToNdjson(resource, path)
+            onResource && await onResource(resource)
             await wait(0)
-        });
+        })
     }
 }

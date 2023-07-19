@@ -5,21 +5,25 @@ export default class TaskRunner
 {
     private tasks: Task[];
 
-    private job: Promise<any>;
+    private _job: Promise<any>;
 
     private parallel: number;
 
     constructor(parallel: number) {
         this.parallel = Math.max(parallel, 1)
         this.tasks = []
-        this.job = Promise.resolve();
+        this._job = Promise.resolve();
+    }
+
+    public get job() {
+        return this._job
     }
 
     public add(...tasks: Task[]) {
         const wasEmpty = this.tasks.length === 0
         this.tasks.push(...tasks)
         wasEmpty && this.run()
-        return this.job
+        return this._job
     }
 
     private run() {
@@ -36,6 +40,6 @@ export default class TaskRunner
             batch.push(wrap(this.tasks.shift()!)())
         }
 
-        this.job = Promise.all(batch)
+        this._job = Promise.all(batch)
     }
 }

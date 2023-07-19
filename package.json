@@ -1,13 +1,13 @@
 {
   "name": "fhir-crawler",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Utility do download resources from a FHIR server",
   "main": "index.js",
   "engines": {
     "node": ">=16"
   },
   "scripts": {
-    "test": "NODE_ENV=test nyc --reporter=lcov ts-mocha -p ./test/tsconfig.json ./test/*.test.ts",
+    "test": "NODE_ENV=test nyc --reporter=lcov ts-mocha -p ./test/tsconfig.json ./test/*.test.ts --exit",
     "test:watch": "NODE_ENV=test npm test -- -w --watch-files='src/*.ts' --watch-files='test/*.ts'",
     "start": "ts-node --transpile-only src/index.ts"
   },
@@ -32,7 +32,7 @@
     "@types/jsonwebtoken": "^9.0.1",
     "@types/mime-types": "^2.1.1",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^18.15.11",
+    "@types/node": "^20.4.2",
     "@types/node-fetch": "^2.6.3",
     "@types/node-jose": "^1.1.10",
     "@types/prompt-sync": "^4.2.0",
@@ -40,6 +40,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "mocha": "^10.2.0",
+    "nock": "^13.3.2",
     "nyc": "^15.1.0",
     "ts-mocha": "^10.0.0"
   },

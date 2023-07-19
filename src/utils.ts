@@ -41,14 +41,11 @@ export function toAbsolute(url: string, base: string) {
  * on the first line. Otherwise the data is appended preceded with EOL
  */
 export async function appendToNdjson(resource: fhir4.Resource, destination: PathLike) {
-    const line = JSON.stringify(resource)
-    const stat = statSync(destination, { throwIfNoEntry: false })
-    const eol = stat && stat.isFile() && stat.size > 0 ? "\n" : ""
-    return appendFile(destination, eol + line)
+    await appendFile(destination, JSON.stringify(resource) + "\n")
 }
 
 export const print = (() => {
-    
+
     const IS_TEST = process.env.NODE_ENV === "test"
 
     let lastLinesLength = 0;
@@ -56,6 +53,7 @@ export const print = (() => {
     const _print = (lines: string | string[]) => {
         _print.clear();
         lines = Array.isArray(lines) ? lines : [lines];
+        // istanbul ignore next
         !IS_TEST && process.stdout.write(lines.join("\n") + "\n");
         lastLinesLength = lines.length
         return _print
@@ -63,6 +61,7 @@ export const print = (() => {
 
     _print.clear = () => {
         if (lastLinesLength) {
+            // istanbul ignore next
             !IS_TEST && process.stdout.write("\x1B[" + lastLinesLength + "A\x1B[0G\x1B[0J");
         }
         return _print

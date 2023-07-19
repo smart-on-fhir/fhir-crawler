@@ -22,14 +22,18 @@ program.name("node .")
 program.version(pkg.version)
 program.option("-c, --config [path]", "Path to JS config file")
 
-program.action(async args => {
+async function main(args: Record<string, any>) {
     
+    // istanbul ignore next
     if (!args.config) {
         console.log(`Please provide the path to your config file as "-c" or "--config" option!\n`)
         return program.help()
     }
 
     const configPath = Path.resolve(process.cwd(), args.config)
+
+    const resolvedPath = require.resolve(configPath);
+    delete require.cache[resolvedPath];
     const config: Config = require(configPath).default
 
     sweep(config.destination)
@@ -49,6 +53,7 @@ program.action(async args => {
         retryStatusCodes: config.retryStatusCodes,
         requestTimeout  : config.requestTimeout ?? 60000,
         destination     : config.destination,
+        manualRetry     : !!config.manualRetry,
         logger
     })
 
@@ -62,6 +67,7 @@ program.action(async args => {
         retryDelay      : config.retryDelay,
         retryStatusCodes: config.retryStatusCodes,
         requestTimeout  : config.requestTimeout ?? 60000,
+        manualRetry     : !!config.manualRetry,
         logger
     })
 
@@ -108,27 +114,27 @@ program.action(async args => {
                     const minutes = duration / 60000
                     lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
                     print(lines)
-                })
+                }).catch(async e => await logger.error(e))
             }))
         }
         print.commit()
     }
-})
 
-program.parseAsync(process.argv).catch(error => {
-    
-    if (error.name === 'AbortError') {
-        console.log(clc.bold('Request was aborted'));
-        process.exit(1)
-    }
+    await runner.job
+}
 
-    else if (error.name === 'FetchError') {
-        console.log(clc.red.bold(error.message))
+program.action(main)
+
+// istanbul ignore next - Only start if not imported
+if (require.main?.filename === __filename) {
+    program.parseAsync(process.argv).catch(async error => {
+        if (error.name === 'AbortError') {
+            console.log(clc.bold('Request was aborted'));
+        } else {
+            console.log(clc.red(error.stack))
+        }
         process.exit(1)
-    }
-    
-    else {
-        console.log(clc.red(error.stack))
-        process.exit(1)
-    }
-});
+    });
+}
+
+export default main;

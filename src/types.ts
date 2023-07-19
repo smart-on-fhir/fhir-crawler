@@ -66,6 +66,8 @@ export interface Config {
      */
     retryLimit: number
 
+    manualRetry?: boolean
+
     /**
      * Request timeout in milliseconds
      */
