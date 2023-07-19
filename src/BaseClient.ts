@@ -140,7 +140,7 @@ export default class BaseClient
                     throw ex
                 }
             }
-        } while ((!response! || (!response.ok && retryStatusCodes.includes(response.status))) && count--);
+        } while ((!response! || (!response.ok && response.status !== 304 && retryStatusCodes.includes(response.status))) && count--);
 
         if (!response!) {
             const msg = `Failed to get any response from: ${_options.method || "GET"} ${url}`
@@ -149,8 +149,7 @@ export default class BaseClient
         }
 
         // Manual retry
-        while (!response.ok) {
-            print.commit()
+        while (!response.ok && response.status !== 304) {
             
             const txt = await response.text()
 
