@@ -9,7 +9,6 @@ import FhirClient       from "./FhirClient"
 import { Config }       from "./types"
 import Logger           from "./Logger"
 import humanizeDuration from "humanize-duration"
-import TaskRunner       from "./TaskRunner"
 import {
     ndjsonEntries,
     print,
@@ -92,35 +91,63 @@ async function main(args: Record<string, any>) {
     const files = await bulkClient.download(manifest, config.destination)
     // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
 
-    // Download Patient data ---------------------------------------------------
-    const runner = new TaskRunner(config.parallel ?? 10)
-
-    for (const loc of files) {    
-        for (const patient of ndjsonEntries(loc)) {
-            if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
-                throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
+    // Wrap download URLs in a generator function so that we can just pull the
+    // next available url (if any) whenever we are ready to download it
+    const downloadUrls = (function*() {
+        for (const loc of files) {
+            for (const patient of ndjsonEntries(loc)) {
+                if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
+                    // istanbul ignore next
+                    throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
+                }
+                counts.Patient++
+                counts["Total FHIR Resources"]++
+                for (const resourceType of Object.keys(config.resources)) {
+                    const query = config.resources[resourceType].replace("#{patientId}", patient.id)
+                    yield `${resourceType}${query}`
+                }
             }
-            counts.Patient++
-            counts["Total FHIR Resources"]++
-            runner.add(...Object.keys(config.resources).map(resourceType => async () => {
-                const query = config.resources[resourceType].replace("#{patientId}", patient.id)
-                return fhirClient.downloadResource(`${resourceType}${query}`, async (res) => {
-                    counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
-                    counts["Total FHIR Resources"]++
-                    counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
-                    const duration = (Date.now() - start)
-                    const lines = Object.keys(counts).map(x => `${clc.bold(x)}: ${clc.cyan(Number(counts[x]).toLocaleString())}`)
-                    lines.push(clc.bold("Duration: ") + clc.cyan(humanizeDuration(duration)))
-                    const minutes = duration / 60000
-                    lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
-                    print(lines)
-                }).catch(async e => await logger.error(e))
-            }))
         }
+    })();
+
+    // Update the stats in the terminal whenever a resource is downloaded 
+    async function onResourceDownloaded(res: fhir4.Resource) {
+        counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
+        counts["Total FHIR Resources"]++
+        counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
+        const duration = (Date.now() - start)
+        const lines = Object.keys(counts).map(x => `${clc.bold(x)}: ${clc.cyan(Number(counts[x]).toLocaleString())}`)
+        lines.push(clc.bold("Duration: ") + clc.cyan(humanizeDuration(duration)))
+        const minutes = duration / 60000
+        lines.push(clc.bold("Throughput: ") + clc.cyan(Math.round(counts["Total FHIR Resources"]/minutes * 100) / 100 + " resources per minute"))
+        print(lines)
+    }
+
+    // Start the first `config.parallel` requests in parallel. Then, while there
+    // are other URLs remaining, whenever a request is completed pull the next
+    // one from the queue
+    async function downloadAll() {
+        const p = Math.max(config.parallel || 10, 1)
+        const tasks: string[] = []
+        let item: IteratorResult<string>
+        do {
+            item = downloadUrls.next()
+            item.value && tasks.push(item.value)
+        } while (!item.done && tasks.length < p)
+
+        async function download(url: string) {
+            await fhirClient.downloadResource(url, onResourceDownloaded).catch(async e => await logger.error(e))
+            if (!item.done) {
+                let item = downloadUrls.next()
+                item.value && await download(item.value)
+            }
+        }
+        
+        await Promise.all(tasks.map(url => download(url)))
         print.commit()
     }
 
-    await runner.job
+    await downloadAll()
 }
 
 program.action(main)

@@ -488,7 +488,12 @@ describe ("Full Export", () => {
             .get("/Group/group-id/$export?_type=Patient")
             .reply(202, "", { "content-location": "http://example.com/status" });
 
-        // Status
+        // Status 1
+        nock("http://example.com")
+            .get("/status")
+            .reply(202, "", { "x-progress": "50%", "retry-after": "0.1" });
+        
+        // Status 2
         nock("http://example.com")
             .get("/status")
             .reply(200, {
@@ -565,6 +570,7 @@ describe ("Full Export", () => {
             retryStatusCodes: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524],
             retryDelay      : 10,
             retryLimit      : 1,
+            parallel        : 2,
             requestTimeout  : 100,
             bulkClient: {
                 clientId          : "bulkClientId",

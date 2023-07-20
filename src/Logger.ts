@@ -17,7 +17,7 @@ export default class Logger
 
     public async error(...args: any[]) {
         const path = Path.join(this.destination, "error_log.txt")
-        return appendFile(path, format(...args) + "\n")
+        return appendFile(path, new Date().toISOString() + " " + format(...args) + "\n")
     }
 
     public async request(url: string, res: Response, options: any, time: string) {
@@ -33,7 +33,8 @@ export default class Logger
 
         const path = Path.join(this.destination, "request_log.tsv")
         return appendFile(path, format(
-            "%s\t%s\t%s\t%s\t%s\t%j\t%j",
+            "%s\t%s\t%s\t%s\t%s\t%s\t%j\t%j",
+            new Date().toISOString(),
             options.method || "GET",
             url,
             res.status,
@@ -51,7 +52,7 @@ export default class Logger
     public clearRequests() {
         writeFileSync(
             Path.join(this.destination, "request_log.tsv"),
-            "Method\tURL\tStatus Code\tStatus Text\tTime (ms)\tOptions\tResponse Headers\n",
+            "DateTime\tMethod\tURL\tStatus Code\tStatus Text\tDuration (ms)\tOptions\tResponse Headers\n",
             "utf-8"
         )
     }
