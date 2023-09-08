@@ -5,6 +5,7 @@ import jwt                             from "jsonwebtoken"
 import nock                            from "nock"
 import { URLSearchParams }             from "url"
 import { format }                      from "util"
+import { appendFile }                  from "fs/promises"
 import { emptyFolder }                 from "./lib"
 import Logger                          from "../src/Logger"
 import FhirClient                      from "../src/FhirClient"
@@ -660,5 +661,194 @@ describe ("Full Export", () => {
 
         expect(errorLog).to.include('FetchError: GET http://example.com/Condition?patient=2 --> 400 Bad Request: "Leaf-level error"')
         expect(errorLog).to.include('FetchError: GET http://example.com/Condition?patient=3 --> 404 Not Found: "Leaf-level not found error"')
+    })
+
+    it ("test request count", async function() {
+        this.timeout(5000)
+
+        const CONFIG = {
+            groupId         : "group-id",
+            destination     : "./test/tmp",
+            poolInterval    : 10,
+            minPoolInterval : 10,
+            maxPoolInterval : 200,
+            throttle        : 0,
+            maxFileSize     : 1024 * 1024 * 1024, // 1 GB
+            retryStatusCodes: [408, 413, 429, 500, 502, 503, 504, 521, 522, 524],
+            retryDelay      : 1,
+            retryLimit      : 2,
+            requestTimeout  : 300,
+            parallel        : 2,
+            bulkClient: {
+                clientId          : "bulkClientId",
+                baseUrl           : "http://example.com/",
+                tokenEndpoint     : "http://example.com/auth/token",
+                privateJWKorSecret: "secret"
+            },
+            fhirClient: {
+                clientId          : "fhirClientId",
+                baseUrl           : "http://example.com/",
+                tokenEndpoint     : "http://example.com/auth/token",
+                privateJWKorSecret: "secret"
+            },
+            resources: {
+                Encounter: `?patient=#{patientId}`,
+                Condition: `?patient=#{patientId}`
+            }
+        };
+
+        const configPath  = "./test/tmp/config.ts"
+
+        writeFileSync(configPath,  "export default " + JSON.stringify(CONFIG, null, 4), "utf8")
+
+        // Kick-off ------------------------------------------------------------
+        nock("http://example.com")
+            .get("/Group/group-id/$export?_type=Patient")
+            .reply(202, "", { "content-location": "http://example.com/status" });
+
+        // Status 1 ------------------------------------------------------------
+        nock("http://example.com")
+            .get("/status")
+            .reply(202, "", { "x-progress": "50%", "retry-after": "0.1" });
+        
+        // Status 2 ------------------------------------------------------------
+        nock("http://example.com").get("/status").reply(200, {
+            transactionTime: new Date().toUTCString(),
+            request: "http://example.com/Group/group-id/$export?_type=Patient",
+            requiresAccessToken: true,
+            output: [
+                {
+                    type: "Patient",
+                    url: "http://example.com/0.Patient.ndjson"
+                }
+            ],
+            error: []
+        });
+
+        // Patients ------------------------------------------------------------
+        nock("http://example.com")
+            .get("/0.Patient.ndjson")
+            .reply(200, '{"resourceType":"Patient","id":1}\n{"resourceType":"Patient","id":2}');
+
+        // Encounters ----------------------------------------------------------
+        nock("http://example.com")
+            .get("/Encounter?patient=1")
+            .reply(200, {
+                resourceType: "Bundle",
+                entry: [
+                    { resource: { resourceType: "Encounter", id: 1, patient: 1 }},
+                    { resource: { resourceType: "Encounter", id: 2, patient: 1 }}
+                ]
+            });
+        nock("http://example.com")
+            .get("/Encounter?patient=2")
+            .reply(200, {
+                resourceType: "Bundle",
+                entry: [
+                    { resource: { resourceType: "Encounter", id: 1, patient: 2 }},
+                    { resource: { resourceType: "Encounter", id: 2, patient: 2 }}
+                ]
+            });
+
+        // Conditions ----------------------------------------------------------
+        nock("http://example.com").get("/Condition?patient=1").reply(500)
+        nock("http://example.com")
+            .get("/Condition?patient=1")
+            .reply(200, {
+                resourceType: "Bundle",
+                entry: [
+                    { resource: { resourceType: "Condition", id: 1, patient: 1 }},
+                    { resource: { resourceType: "Condition", id: 2, patient: 1 }}
+                ]
+            });
+        
+        nock("http://example.com").get("/Condition?patient=2").reply(500)
+        nock("http://example.com")
+            .get("/Condition?patient=2")
+            .reply(200, {
+                resourceType: "Bundle",
+                entry: [
+                    { resource: { resourceType: "Condition", id: 1, patient: 2 }},
+                    { resource: { resourceType: "Condition", id: 2, patient: 2 }}
+                ]
+            });
+
+        await app({ config: configPath })
+    })
+
+    // =========================================================================
+})
+
+describe("logs", () => {
+    it ("work fine", async () => {
+
+        const path    = "./test/tmp/test_request_log.txt"
+        const pattern = "%s\t%s\t%s\t%s\t%s\t%s\t%j\t%j"
+
+        writeFileSync(path, "", "utf8")
+
+        function log(...args: any[]) {
+            return appendFile(path, format(pattern, ...args) + "\n")
+        }
+
+        function read() {
+            return readFileSync(path, "utf8")
+        }
+
+        async function test(input: any[], out: string) {
+            await log(...input)
+            expect(read()).to.equal(out)
+        }
+
+        await test(["date"], "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n")
+        await test(["date", "GET"], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url"], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url", 100], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url", 100, "OK"], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url", 100, "OK", 5], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url", 100, "OK", 5, {}], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t{}\t%j\n"
+        ].join(""))
+        await test(["date", "GET", "url", 100, "OK", 5, {}, []], [
+            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t{}\t%j\n",
+            "date\tGET\turl\t100\tOK\t5\t{}\t[]\n"
+        ].join(""))
     })
 })

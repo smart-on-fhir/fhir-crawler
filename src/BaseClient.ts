@@ -149,7 +149,7 @@ export default class BaseClient
                     throw ex
                 }
             }
-        } while ((!response! || (!response.ok && response.status !== 304 && retryStatusCodes.includes(response.status))) && count--);
+        } while ((!response! || (!response.ok && response.status !== 304 && retryStatusCodes.includes(response.status))) && --count > 0);
 
         if (!response!) {
             const msg = `Failed to get any response from: ${_options.method} ${url}`
