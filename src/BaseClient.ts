@@ -162,10 +162,10 @@ export default class BaseClient
             
             const txt = await response.text()
             
-            print.commit()
 
             // istanbul ignore next (manual retry)
             if (manualRetry && process.env.NODE_ENV !== "test" && this.askToRetry(url, response, _options, txt)) {
+                print.commit()
                 response = await this._fetch(url, _options)
                 continue
             }
