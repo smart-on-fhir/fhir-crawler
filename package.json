@@ -1,6 +1,6 @@
 {
   "name": "fhir-crawler",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Utility do download resources from a FHIR server",
   "main": "index.js",
   "engines": {
