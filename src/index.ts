@@ -127,7 +127,7 @@ async function main(args: Record<string, any>) {
     // are other URLs remaining, whenever a request is completed pull the next
     // one from the queue
     async function downloadAll() {
-        const p = Math.max(config.parallel || 10, 1)
+        const p = Math.max(config.parallel || 1, 1)
         const tasks: string[] = []
         let item: IteratorResult<string>
         do {
