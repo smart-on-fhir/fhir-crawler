@@ -115,6 +115,10 @@ async function main(args: Record<string, any>) {
         counts[res.resourceType] = (counts[res.resourceType] || 0) + 1
         counts["Total FHIR Resources"]++
         counts["Total FHIR Requests"] = bulkClient.requestsCount + fhirClient.requestsCount
+        printState()
+    }
+
+    async function printState() {
         const duration = (Date.now() - start)
         const lines = Object.keys(counts).map(x => `${clc.bold(x)}: ${clc.cyan(Number(counts[x]).toLocaleString())}`)
         lines.push(clc.bold("Duration: ") + clc.cyan(humanizeDuration(duration)))
@@ -136,7 +140,11 @@ async function main(args: Record<string, any>) {
         } while (!item.done && tasks.length < p)
 
         async function download(url: string) {
-            await fhirClient.downloadResource(url, onResourceDownloaded).catch(async e => await logger.error(e))
+            await fhirClient.downloadResource(url, onResourceDownloaded).catch(async e => {
+                counts["Total FHIR Requests"]++
+                printState()
+                await logger.error(e)
+            })
             if (!item.done) {
                 let item = downloadUrls.next()
                 item.value && await download(item.value)
