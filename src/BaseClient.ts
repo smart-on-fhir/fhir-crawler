@@ -124,9 +124,9 @@ export default class BaseClient
     protected async request<T=any>(url: string, options?: RequestInit): Promise<{ response: Response, body: T }>;
     protected async request<T=any>(url: string, options?: RequestInit, raw?: boolean)
     {
-        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, manualRetry } = this.options
+        const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, manualRetry, headers = {} } = this.options
 
-        const _options = await this.buildRequestOptions(options)
+        const _options = await this.buildRequestOptions({ ...options, headers })
 
         url = toAbsolute(url, baseUrl)
 
