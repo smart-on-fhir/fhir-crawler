@@ -5,7 +5,6 @@ import jwt                             from "jsonwebtoken"
 import nock                            from "nock"
 import { URLSearchParams }             from "url"
 import { format }                      from "util"
-import { appendFile }                  from "fs/promises"
 import { emptyFolder }                 from "./lib"
 import Logger                          from "../src/Logger"
 import FhirClient                      from "../src/FhirClient"
@@ -777,78 +776,4 @@ describe ("Full Export", () => {
     })
 
     // =========================================================================
-})
-
-describe("logs", () => {
-    it ("work fine", async () => {
-
-        const path    = "./test/tmp/test_request_log.txt"
-        const pattern = "%s\t%s\t%s\t%s\t%s\t%s\t%j\t%j"
-
-        writeFileSync(path, "", "utf8")
-
-        function log(...args: any[]) {
-            return appendFile(path, format(pattern, ...args) + "\n")
-        }
-
-        function read() {
-            return readFileSync(path, "utf8")
-        }
-
-        async function test(input: any[], out: string) {
-            await log(...input)
-            expect(read()).to.equal(out)
-        }
-
-        await test(["date"], "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n")
-        await test(["date", "GET"], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url"], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url", 100], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url", 100, "OK"], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url", 100, "OK", 5], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url", 100, "OK", 5, {}], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t{}\t%j\n"
-        ].join(""))
-        await test(["date", "GET", "url", 100, "OK", 5, {}, []], [
-            "date\t%s\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\t%s\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t%s\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\t%s\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t%s\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t%j\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t{}\t%j\n",
-            "date\tGET\turl\t100\tOK\t5\t{}\t[]\n"
-        ].join(""))
-    })
 })
