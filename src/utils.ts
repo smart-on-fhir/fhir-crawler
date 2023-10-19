@@ -192,7 +192,6 @@ export function sweep(destination: string) {
  * file size does not really matter). This is much easier than an equivalent
  * readable stream implementation. It is also easier to debug and should produce
  * reliable stack traces in case of error.
- * @todo Add ability to customize the EOL or use a RegExp to match them all.
  * @param filePath The path to the file to read (preferably an absolute path)
  */
 export function* readLine(filePath: string): IterableIterator<string> {
@@ -200,18 +199,19 @@ export function* readLine(filePath: string): IterableIterator<string> {
     const fd = openSync(filePath, "r");
     const chunk = Buffer.alloc(CHUNK_SIZE, "", "utf8");
 
-    let eolPos: number;
     let blob = "";
 
     // $lab:coverage:off$
     while (true) {
     // $lab:coverage:on$
-        eolPos = blob.indexOf("\n");
+        
+        const match = blob.match(/\r\n|\n|\r/)
 
         // buffered line
-        if (eolPos > -1) {
+        if (match) {
+            const eolPos = match.index!;
             yield blob.substring(0, eolPos);
-            blob = blob.substring(eolPos + 1);
+            blob = blob.substring(eolPos + match[0].length);
         }
 
         else {
