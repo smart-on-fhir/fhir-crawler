@@ -2,6 +2,7 @@ import Path             from "path"
 import { format }       from "util"
 import { Command }      from "commander"
 import { existsSync, statSync } from "fs"
+import { writeFile, mkdir } from "fs/promises"
 import clc              from "cli-color"
 import pkg              from "../package.json"
 import BulkDataClient   from "./BulkDataClient"
@@ -19,6 +20,7 @@ import {
 const program = new Command();
 program.name("node .")
 program.version(pkg.version)
+program.option("-p, --path [path]", "Path to directory containing the config file")
 program.option(
     "--patients [paths...]",
     "Path to ndjson file with patients. If passed, the bulk data part of the export " +
@@ -28,23 +30,60 @@ program.option(
     []
 )
 
-async function main(args: Record<string, any>) {
-    
-    // istanbul ignore next
-    if (!args.config) {
-        console.log(`Please provide the path to your config file as "-c" or "--config" option!\n`)
-        return program.help()
+function getInputDirectory(arg = ""): string {
+    const cwd = process.cwd()
+
+    let inputDir = cwd
+
+    if (arg) {
+        inputDir = Path.resolve(cwd, arg)
+        const stat = statSync(inputDir, { throwIfNoEntry: false })
+        if (stat && !stat.isDirectory()) {
+            console.log(
+                `The provided path "${arg}" resolves to "${inputDir}" which ` +
+                `is not a directory!\n`
+            )
+            program.help()
+            process.exit(1)
+        }
     }
 
-    const configPath = Path.resolve(process.cwd(), args.config)
+    return inputDir
+}
 
-    const resolvedPath = require.resolve(configPath);
-    delete require.cache[resolvedPath];
-    const config: Config = require(configPath).default
+async function loadConfig(configDir: string): Promise<Config> {
 
-    sweep(config.destination)
+    let configFilePath = Path.join(configDir, "config.js");
+    const stat = statSync(configFilePath, { throwIfNoEntry: false })
+    if (!stat || !stat.isFile()) {
+        console.log(
+            `No "config.js" file found in the input directory. Please create ` +
+            `one or specify a custom path using the "-p" parameter.\n`
+        )
+        program.help()
+        process.exit(1)
+    }
 
-    const logger = new Logger(config.destination)
+    configFilePath = require.resolve(configFilePath);
+    delete require.cache[configFilePath];
+    const config = require(configFilePath);
+
+    config.destination = Path.join(configDir, "output")
+    
+    if (!existsSync(config.destination)) {
+        await mkdir(config.destination)
+    } else {
+        sweep(config.destination)
+    }
+
+    return config
+}
+
+async function main(args: Record<string, any>) {
+
+    const inputDir = getInputDirectory(args.path)
+    const config   = await loadConfig(inputDir)
+    const logger   = new Logger(config.destination)
 
     const bulkClient = new BulkDataClient({
         ...config.bulkClient,
