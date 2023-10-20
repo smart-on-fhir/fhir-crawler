@@ -126,7 +126,7 @@ export default class BaseClient
     {
         const { baseUrl, logger, retryLimit, retryDelay, retryStatusCodes, manualRetry, headers = {} } = this.options
 
-        const _options = await this.buildRequestOptions({ ...options, headers })
+        const _options = await this.buildRequestOptions({ ...options, headers: { ...headers, ...options?.headers } })
 
         url = toAbsolute(url, baseUrl)
 
