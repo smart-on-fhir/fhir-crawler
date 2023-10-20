@@ -1,7 +1,7 @@
 import Path             from "path"
 import { format }       from "util"
 import { Command }      from "commander"
-import { writeFile }    from "fs/promises"
+import { existsSync, statSync } from "fs"
 import clc              from "cli-color"
 import pkg              from "../package.json"
 import BulkDataClient   from "./BulkDataClient"
@@ -19,7 +19,14 @@ import {
 const program = new Command();
 program.name("node .")
 program.version(pkg.version)
-program.option("-c, --config [path]", "Path to JS config file")
+program.option(
+    "--patients [paths...]",
+    "Path to ndjson file with patients. If passed, the bulk data part of the export " +
+    "will be skipped and these patients will be used instead. Can be specified " +
+    "multiple times for multiple patient files. Paths should be relative to the " +
+    "input directory.",
+    []
+)
 
 async function main(args: Record<string, any>) {
     
@@ -80,16 +87,31 @@ async function main(args: Record<string, any>) {
         counts[resourceType] = 0
     }
 
-    // Download Patients -------------------------------------------------------
-    print("Exporting patients")
-    const statusLoc = await bulkClient.kickOff()
-    print("Waiting for patients export...")
-    let progressChecks = 0
-    const manifest = await bulkClient.waitForExport(statusLoc, status => print(`Waiting for patients export: ${status} (${++progressChecks})`))
-    await writeFile(Path.join(config.destination, "manifest.json"), JSON.stringify(manifest, null, 4), "utf8")
-    print("Downloading patients")
-    const files = await bulkClient.download(manifest, config.destination)
-    // const files = [Path.join(__dirname, "Epic.Patient.ndjson")];
+    let files: string[] = [];
+
+    // Use existing patients ---------------------------------------------------
+    if (args.patients.length) {
+        files = args.patients.map((p: string) => {
+            const fullPath = Path.join(__dirname, p)
+            const stat = statSync(fullPath, { throwIfNoEntry: false })
+            if (!stat || !stat.isFile()) {
+                throw new Error(`File "${fullPath}" does not exist.`)
+            }
+            return fullPath
+        })
+    }
+    
+    // Download patients -------------------------------------------------------
+    else {
+        print("Exporting patients")
+        const statusLoc = await bulkClient.kickOff()
+        print("Waiting for patients export...")
+        let progressChecks = 0
+        const manifest = await bulkClient.waitForExport(statusLoc, status => print(`Waiting for patients export: ${status} (${++progressChecks})`))
+        await writeFile(Path.join(config.destination, "manifest.json"), JSON.stringify(manifest, null, 4), "utf8")
+        print("Downloading patients")
+        files = await bulkClient.download(manifest, config.destination)
+    }
 
     // Wrap download URLs in a generator function so that we can just pull the
     // next available url (if any) whenever we are ready to download it
