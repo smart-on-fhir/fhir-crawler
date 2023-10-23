@@ -131,7 +131,7 @@ async function main(args: Record<string, any>) {
     // Use existing patients ---------------------------------------------------
     if (args.patients.length) {
         files = args.patients.map((p: string) => {
-            const fullPath = Path.join(__dirname, p)
+            const fullPath = Path.join(inputDir, p)
             const stat = statSync(fullPath, { throwIfNoEntry: false })
             if (!stat || !stat.isFile()) {
                 throw new Error(`File "${fullPath}" does not exist.`)
@@ -207,7 +207,7 @@ async function main(args: Record<string, any>) {
                 await logger.error(e)
             })
             if (!item.done) {
-                let item = downloadUrls.next()
+                item = downloadUrls.next()
                 item.value && await download(item.value)
             }
         }
