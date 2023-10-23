@@ -129,7 +129,7 @@ async function main(args: Record<string, any>) {
     let files: string[] = [];
 
     // Use existing patients ---------------------------------------------------
-    if (args.patients.length) {
+    if (args.patients?.length) {
         files = args.patients.map((p: string) => {
             const fullPath = Path.join(inputDir, p)
             const stat = statSync(fullPath, { throwIfNoEntry: false })

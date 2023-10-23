@@ -451,7 +451,6 @@ describe ("Full Export", () => {
 
         const CONFIG = {
             groupId         : "group-id",
-            destination     : "./test/tmp",
             poolInterval    : 10,
             minPoolInterval : 10,
             maxPoolInterval : 200,
@@ -479,9 +478,9 @@ describe ("Full Export", () => {
             }
         };
 
-        const configPath  = "./test/tmp/config.ts"
+        const configPath  = "./test/tmp"
 
-        writeFileSync(configPath,  "export default " + JSON.stringify(CONFIG, null, 4), "utf8")
+        writeFileSync(configPath + "/config.js",  "module.exports = " + JSON.stringify(CONFIG, null, 4), "utf8")
 
         // Kick-off
         nock("http://example.com")
@@ -554,14 +553,13 @@ describe ("Full Export", () => {
                 ]
             });
 
-        await app({ config: configPath })
+        await app({ path: configPath })
     })
 
     it ("can do full export ignoring errors", async () => {
 
         const CONFIG = {
             groupId         : "group-id",
-            destination     : "./test/tmp",
             poolInterval    : 10,
             minPoolInterval : 10,
             maxPoolInterval : 200,
@@ -590,9 +588,9 @@ describe ("Full Export", () => {
             }
         };
 
-        const configPath  = "./test/tmp/config.ts"
+        const configPath  = "./test/tmp"
 
-        writeFileSync(configPath,  "export default " + JSON.stringify(CONFIG, null, 4), "utf8")
+        writeFileSync(configPath + "/config.js",  "module.exports = " + JSON.stringify(CONFIG, null, 4), "utf8")
 
         // Kick-off
         nock("http://example.com")
@@ -654,9 +652,9 @@ describe ("Full Export", () => {
         nock("http://example.com").get("/Condition?patient=2").reply(400, "Leaf-level error");
         nock("http://example.com").get("/Condition?patient=3").reply(404, "Leaf-level not found error");
 
-        await app({ config: configPath })
+        await app({ path: configPath })
 
-        const errorLog = readFileSync("./test/tmp/error_log.txt", "utf8")
+        const errorLog = readFileSync("./test/tmp/output/error_log.txt", "utf8")
 
         expect(errorLog).to.include('FetchError: GET http://example.com/Condition?patient=2 --> 400 Bad Request: "Leaf-level error"')
         expect(errorLog).to.include('FetchError: GET http://example.com/Condition?patient=3 --> 404 Not Found: "Leaf-level not found error"')
@@ -667,7 +665,6 @@ describe ("Full Export", () => {
 
         const CONFIG = {
             groupId         : "group-id",
-            destination     : "./test/tmp",
             poolInterval    : 10,
             minPoolInterval : 10,
             maxPoolInterval : 200,
@@ -696,9 +693,9 @@ describe ("Full Export", () => {
             }
         };
 
-        const configPath  = "./test/tmp/config.ts"
+        const configPath  = "./test/tmp/"
 
-        writeFileSync(configPath,  "export default " + JSON.stringify(CONFIG, null, 4), "utf8")
+        writeFileSync(configPath + "/config.js",  "module.exports = " + JSON.stringify(CONFIG, null, 4), "utf8")
 
         // Kick-off ------------------------------------------------------------
         nock("http://example.com")
@@ -772,7 +769,7 @@ describe ("Full Export", () => {
                 ]
             });
 
-        await app({ config: configPath })
+        await app({ path: configPath })
     })
 
     // =========================================================================
