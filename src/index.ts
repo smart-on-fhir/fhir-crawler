@@ -13,6 +13,7 @@ import humanizeDuration from "humanize-duration"
 import {
     ndjsonEntries,
     print,
+    readLine,
     sweep
 } from "./utils"
 
@@ -23,10 +24,11 @@ program.version(pkg.version)
 program.option("-p, --path [path]", "Path to directory containing the config file")
 program.option(
     "--patients [paths...]",
-    "Path to ndjson file with patients. If passed, the bulk data part of the export " +
-    "will be skipped and these patients will be used instead. Can be specified " +
-    "multiple times for multiple patient files. Paths should be relative to the " +
-    "input directory.",
+    "Path to an NDJSON file with Patients or a text file with Patient IDs. " +
+    "If passed, the bulk data part of the export will be skipped and " +
+    "these patients will be used instead. " +
+    "Can be specified multiple times for multiple patient files. " +
+    "Paths should be relative to the input directory.",
     []
 )
 
@@ -77,6 +79,31 @@ async function loadConfig(configDir: string): Promise<Config> {
     }
 
     return config
+}
+
+/**
+ Parses either an ndjson/jsonl file or a basic text file, and returns the Patient IDs found.
+ * @param path The path to the file to read
+ */
+function *readPatientIdsFromFile(path: string): IterableIterator<string> {
+
+    if (path.endsWith(".ndjson") || path.endsWith(".jsonl")) {
+        for (const patient of ndjsonEntries(path)) {
+            if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
+                // istanbul ignore next
+                throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
+            }
+            yield patient.id;
+        }
+    }
+    else {
+        const lines = readLine(path);
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed)
+                yield trimmed;
+        }
+    }
 }
 
 async function main(args: Record<string, any>) {
@@ -156,15 +183,11 @@ async function main(args: Record<string, any>) {
     // next available url (if any) whenever we are ready to download it
     const downloadUrls = (function*() {
         for (const loc of files) {
-            for (const patient of ndjsonEntries(loc)) {
-                if (!patient || typeof patient !== "object" || patient.resourceType !== "Patient") {
-                    // istanbul ignore next
-                    throw new Error(format(`A non-patient entry found in the Patient ndjson file: %o`, patient))
-                }
+            for (const patientId of readPatientIdsFromFile(loc)) {
                 counts.Patient++
                 counts["Total FHIR Resources"]++
                 for (const resourceType of Object.keys(config.resources)) {
-                    const query = config.resources[resourceType].replace("#{patientId}", patient.id)
+                    const query = config.resources[resourceType].replace("#{patientId}", patientId)
                     yield `${resourceType}${query}`
                 }
             }

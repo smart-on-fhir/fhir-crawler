@@ -106,6 +106,5 @@ dist
 
 downloads/*
 config/*
-!config/example-config.ts
 .DS_Store
 volume/
